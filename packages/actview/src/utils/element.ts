@@ -20,7 +20,10 @@ export function contains(parent?: Element | null, child?: Element | null) {
   const rootNode = child.getRootNode?.();
 
   // First, attempt with faster native method
-  if (parent.contains(child)) {
+  // `parent.contains(window)` 在真实浏览器抛 TypeError（window 不是 Node），
+  // jsdom 则宽容返回 false；加 Node 防护对齐两环境行为（window mousemove 等
+  // 事件经 getTarget 取到 window 时）。
+  if (child instanceof Node && parent.contains(child)) {
     return true;
   }
 

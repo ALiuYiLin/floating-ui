@@ -1,4 +1,11 @@
-import {onUnmounted, ref, watch, type Ref} from '@actview/core';
+import {
+  computed,
+  onUnmounted,
+  ref,
+  toValue,
+  watch,
+  type Ref,
+} from '@actview/core';
 import {getWindow} from '@floating-ui/utils/dom';
 import {
   contains,
@@ -142,7 +149,13 @@ export function useClientPoint(
     elements: {floating, domReference},
     refs,
   } = context;
-  const {enabled = true, axis = 'both', x = null, y = null} = props;
+  // React 版每次渲染重新传入 props（rerender 时新值生效）；actview 的
+  // defineComponent setup 只跑一次，props 改为 computed + toValue 支持 Ref，
+  // 使 x/y/enabled/axis 变化可追踪（测试经 computed 传参对齐 React rerender）。
+  const enabled = computed(() => toValue(props.enabled) ?? true);
+  const axis = computed(() => toValue(props.axis) ?? 'both');
+  const x = computed(() => toValue(props.x) ?? null);
+  const y = computed(() => toValue(props.y) ?? null);
 
   const initialRef = ref(false);
   const cleanupListenerRef = ref<null | (() => void)>(null);
@@ -167,7 +180,7 @@ export function useClientPoint(
       createVirtualElement(domReference.value, {
         x,
         y,
-        axis,
+        axis: axis.value,
         dataRef,
         pointerType: pointerType.value,
       }),
@@ -176,7 +189,7 @@ export function useClientPoint(
 
   const handleReferenceEnterOrMove = useEffectEvent(
     (event: MouseEvent) => {
-      if (x != null || y != null) return;
+      if (x.value != null || y.value != null) return;
 
       if (!open.value) {
         setReference(event.clientX, event.clientY);
@@ -193,13 +206,19 @@ export function useClientPoint(
   // mouse even if the floating element is transitioning out. On touch
   // devices, this is undesirable because the floating element will move to
   // the dismissal touch point.
-  const openCheck = isMouseLikePointerType(pointerType.value)
-    ? floating.value
-    : open.value;
+  // React 版每次渲染重新计算（pointerType/floating/open 变化时）；actview 用
+  // computed 追踪（const 快照会永远停在 setup 时的 null）。
+  const openCheck = computed(() =>
+    isMouseLikePointerType(pointerType.value)
+      ? floating.value
+      : open.value,
+  );
 
   const addListener = () => {
     // Explicitly specified `x`/`y` coordinates shouldn't add a listener.
-    if (!openCheck || !enabled || x != null || y != null) return;
+    if (!openCheck.value || !enabled.value || x.value != null || y.value != null) {
+      return;
+    }
 
     const win = getWindow(floating.value);
 
@@ -249,9 +268,9 @@ export function useClientPoint(
 
   // React 版 `useEffect`：[enabled, floating] → 无 floating 时重置 initialRef
   watch(
-    floating,
+    [enabled, floating],
     () => {
-      if (enabled && !floating.value) {
+      if (enabled.value && !floating.value) {
         initialRef.value = false;
       }
     },
@@ -259,18 +278,24 @@ export function useClientPoint(
   );
 
   // React 版 `useEffect`：[enabled, open] → 禁用且打开时置位 initialRef
-  watch(open, () => {
-    if (!enabled && open.value) {
+  watch([enabled, open], () => {
+    if (!enabled.value && open.value) {
       initialRef.value = true;
     }
   });
 
   // React 版 `useModernLayoutEffect`：[enabled, x, y] → 显式坐标立即 setReference。
-  // x / y 为 setup 解构的固定值，挂载时执行一次即可。
-  if (enabled && (x != null || y != null)) {
-    initialRef.value = false;
-    setReference(x, y);
-  }
+  // props 变化（rerender）时重新执行；普通值（非 Ref）时仅挂载执行一次。
+  watch(
+    [enabled, x, y],
+    () => {
+      if (enabled.value && (x.value != null || y.value != null)) {
+        initialRef.value = false;
+        setReference(x.value, y.value);
+      }
+    },
+    {immediate: true},
+  );
 
   function setPointerTypeRef(event: PointerEvent) {
     pointerType.value = event.pointerType;
@@ -283,5 +308,5 @@ export function useClientPoint(
     onMouseEnter: handleReferenceEnterOrMove,
   };
 
-  return enabled ? {reference} : {};
+  return enabled.value ? {reference} : {};
 }

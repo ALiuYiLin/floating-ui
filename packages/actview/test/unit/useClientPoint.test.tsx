@@ -1,5 +1,5 @@
 import type {Coords} from '@floating-ui/utils';
-import {defineComponent, ref} from '@actview/core';
+import {computed, defineComponent, ref} from '@actview/core';
 import {test} from 'vitest';
 
 import {useClientPoint, useFloating, useInteractions} from '../../src';
@@ -31,9 +31,12 @@ const App = defineComponent(function (props: {
       isOpen.value = o;
     },
   });
+  // React 版 rerender 后 useClientPoint 收到新 props；actview 的 setup 只跑一次，
+  // 用 computed 把 props.point/enabled 响应式传入（hook 内部 toValue 解包）。
   const clientPoint = useClientPoint(context, {
-    enabled: props.enabled ?? true,
-    ...(props.point ?? {}),
+    enabled: computed(() => props.enabled ?? true),
+    x: computed(() => props.point?.x ?? null),
+    y: computed(() => props.point?.y ?? null),
     axis: props.axis,
   });
   const {getReferenceProps, getFloatingProps} = useInteractions([
