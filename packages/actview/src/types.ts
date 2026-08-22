@@ -14,12 +14,18 @@ import type {
   Dimensions,
   MiddlewareData,
   Placement,
+  Rect,
   Side,
   Strategy,
   VirtualElement,
 } from '@floating-ui/dom';
 
-export type {Dimensions, Placement, Side};
+export type {Dimensions, Placement, Rect, Side};
+export type {SafePolygonOptions} from './safePolygon';
+
+export type Delay =
+  | number
+  | Partial<{open: number | undefined; close: number | undefined}>;
 
 export type ReferenceType = Element | VirtualElement;
 
@@ -44,8 +50,8 @@ export interface ContextData {
  * actview 版响应式字段为 `Ref<T>`（.value），hooks 阶段实现 useFloating 时补全。
  */
 export interface UsePositionFloatingReturn {
-  x: Ref<number>;
-  y: Ref<number>;
+  x: Ref<number | null>;
+  y: Ref<number | null>;
   placement: Ref<Placement>;
   strategy: Ref<Strategy>;
   middlewareData: Ref<MiddlewareData>;
