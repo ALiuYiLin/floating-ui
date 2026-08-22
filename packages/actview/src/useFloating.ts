@@ -202,40 +202,44 @@ export function useFloating(
   });
 
   const isMountedRef = ref(false);
+
+  // React 版 `useModernLayoutEffect`：[referenceEl, floatingEl, update, ...]。
+  // actview 语义（同 Vue）：
+  // - 首次定位在 `onMounted`（DOM 挂载完成、元素就绪后）执行，
+  //   而非 `watch(..., {immediate: true})`——后者在 setup 同步执行时元素未挂载；
+  // - 元素变化（setReference / setFloating / 外部 elements Ref 更新）由
+  //   `watch` 追踪，重建 whileElementsMounted 或重新定位。
+  let cleanupWhileMounted: (() => void) | undefined;
+
+  const syncAndPosition = () => {
+    cleanupWhileMounted?.();
+    cleanupWhileMounted = undefined;
+
+    if (referenceEl.value) referenceRef.value = referenceEl.value;
+    if (floatingEl.value) floatingRef.value = floatingEl.value;
+
+    if (referenceRef.value && floatingRef.value) {
+      if (whileElementsMounted) {
+        cleanupWhileMounted = whileElementsMounted(
+          referenceRef.value,
+          floatingRef.value,
+          update,
+        );
+      } else {
+        update();
+      }
+    }
+  };
+
+  watch([referenceEl, floatingEl], syncAndPosition);
+
   onMounted(() => {
     isMountedRef.value = true;
+    syncAndPosition();
   });
+
   onUnmounted(() => {
     isMountedRef.value = false;
-  });
-
-  // React 版 `useModernLayoutEffect`：[referenceEl, floatingEl, update, ...]
-  let cleanupWhileMounted: (() => void) | undefined;
-  watch(
-    [referenceEl, floatingEl],
-    () => {
-      cleanupWhileMounted?.();
-      cleanupWhileMounted = undefined;
-
-      if (referenceEl.value) referenceRef.value = referenceEl.value;
-      if (floatingEl.value) floatingRef.value = floatingEl.value;
-
-      if (referenceEl.value && floatingEl.value) {
-        if (whileElementsMounted) {
-          cleanupWhileMounted = whileElementsMounted(
-            referenceEl.value,
-            floatingEl.value,
-            update,
-          );
-        } else {
-          update();
-        }
-      }
-    },
-    {immediate: true},
-  );
-
-  onUnmounted(() => {
     cleanupWhileMounted?.();
   });
 
