@@ -634,9 +634,13 @@ export const FloatingFocusManager = defineComponent(function (
           (typeof initialFocusValue === 'number'
             ? focusableElements[initialFocusValue]
             : initialFocusValue.value) || floatingFocusElement.value;
+        // React 版用打开时的快照 `previouslyFocusedElement` 判断，但 actview 的
+        // watch 触发顺序与 React 的 layout effect 相反（父先子后）：useListNavigation
+        // 的 focusItem 可能已在本微任务前聚焦了列表项。这里用实时 activeElement 检查，
+        // 若焦点已在 floating 内（如列表导航已聚焦），则不重复抢焦。
         const focusAlreadyInsideFloatingEl = contains(
           floatingFocusElement.value,
-          previouslyFocusedElement,
+          activeElement(doc),
         );
 
         if (!ignoreInitialFocus && !focusAlreadyInsideFloatingEl && open.value) {

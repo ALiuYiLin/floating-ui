@@ -143,21 +143,30 @@ export function useListItem(props: UseListItemProps = {}): {
     }
   };
 
-  // React 版 `useModernLayoutEffect`：[register, unregister] → 挂载注册
+  // React 版 `useModernLayoutEffect`：[register, unregister] → 挂载注册。
+  // onUnmounted 必须在 setup 同步调用（watch 回调无组件实例上下文），
+  // 用闭包变量记录已注册节点。
+  let registeredNode: Node | null = null;
   watch(
     () => componentRef.value,
     () => {
       const node = componentRef.value;
       if (node) {
         listContext.value.register(node);
-        onUnmounted(() => {
-          listContext.value.unregister(node);
-        });
+        registeredNode = node;
       }
     },
   );
+  onUnmounted(() => {
+    if (registeredNode) {
+      listContext.value.unregister(registeredNode);
+    }
+  });
 
-  // React 版 `useModernLayoutEffect`：[map] → 同步 index
+  // React 版 `useModernLayoutEffect`：[map] → 同步 index。
+  // React 版靠「ref 回调依赖 index state、依赖变化时 React 重新调用 ref(null)+ref(node)」
+  // 写入 elementsRef；actview 的 ref 回调是固定函数不会重建，这里在 index 就绪后
+  // 主动同步 elementsRef / labelsRef。
   watch(
     () => listContext.value.map,
     () => {
@@ -165,6 +174,13 @@ export function useListItem(props: UseListItemProps = {}): {
       const index = node ? listContext.value.map.get(node) : null;
       if (index != null) {
         indexRef.value = index;
+        listContext.value.elementsRef.value[index] = node;
+        if (listContext.value.labelsRef) {
+          const isLabelDefined = label !== undefined;
+          listContext.value.labelsRef.value[index] = isLabelDefined
+            ? label
+            : node?.textContent ?? null;
+        }
       }
     },
   );

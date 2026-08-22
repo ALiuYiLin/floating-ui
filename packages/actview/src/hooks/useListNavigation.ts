@@ -497,6 +497,23 @@ export function useListNavigation(
         indexRef.value = activeIndexValue;
         focusItem();
         forceScrollIntoViewRef.value = false;
+      } else if (activeIndexValue != null) {
+        // actview：列表项注册在微任务链中（itemRef 同步 → componentRef watch
+        // register → map computed → map watch 写 elementsRef），父组件 watch
+        // 先于子组件触发——activeIndex 同步时 listRef 可能尚未填充。
+        // 推迟到微任务后重试（注册链可能跨多个 flush）。
+        indexRef.value = activeIndexValue;
+        let retries = 0;
+        const tryFocus = () => {
+          if (!isIndexOutOfListBounds(listRef, indexRef.value)) {
+            focusItem();
+            forceScrollIntoViewRef.value = false;
+          } else if (retries < 2) {
+            retries++;
+            queueMicrotask(tryFocus);
+          }
+        };
+        queueMicrotask(tryFocus);
       }
     },
   );
@@ -555,7 +572,10 @@ export function useListNavigation(
       previousOpenRef.value = open.value;
       previousMountedRef.value = !!elements.floating.value;
     },
-    {immediate: true},
+    // flush 'post'：与 React 版「最后执行的 layout effect」语义对齐——previous*
+    // 记录的是「上一次渲染」的状态。actview 的 watch 默认 pre（微任务）可能
+    // 先于依赖它的 activeIndex watch 触发，导致 previousOpenRef 变成当前值。
+    {immediate: true, flush: 'post'},
   );
 
   // React 版 `useModernLayoutEffect`：[open, focusItemOnOpen] → 关闭时重置
@@ -1007,13 +1027,18 @@ export function useListNavigation(
 
           stopEvent(event);
 
+          // React 版 `if (open)` 读取的是本次渲染的旧值（setState 异步）；actview
+          // 的 ref 赋值同步，onOpenChange 后 open.value 已更新。用进入处理器时的
+          // wasOpen 区分「原本已打开（导航）」与「本次刚打开（只触发 onOpenChange）」。
+          const wasOpen = open.value;
+
           if (!open.value && openOnArrowKeyDown) {
             onOpenChange(true, event, 'list-navigation');
           } else {
             commonOnKeyDown(event);
           }
 
-          if (open.value) {
+          if (wasOpen) {
             onNavigate();
           }
         }
