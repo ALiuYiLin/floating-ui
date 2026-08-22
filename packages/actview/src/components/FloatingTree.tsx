@@ -55,14 +55,25 @@ export function useFloatingNodeId(
   );
 
   let added = false;
-  watch(id, () => {
-    if (!id.value || added) return;
-    const node = {id: id.value, parentId: parentId.value};
-    tree?.addNode(node);
-    added = true;
-    onUnmounted(() => {
+  let node: FloatingNodeType | null = null;
+  // immediate：id 由 useId 同步生成（不再变化），非 immediate 的 watch 不会触发；
+  // setup 时 tree 上下文已就绪（FloatingTree Provider），立即注册节点。
+  watch(
+    id,
+    () => {
+      if (!id.value || added) return;
+      node = {id: id.value, parentId: parentId.value};
+      tree?.addNode(node);
+      added = true;
+    },
+    {immediate: true},
+  );
+  // React 版在 effect cleanup 里 removeNode；actview 的 onUnmounted 必须在
+  // setup 同步调用（watch 回调无组件实例上下文），这里用闭包变量。
+  onUnmounted(() => {
+    if (node) {
       tree?.removeNode(node);
-    });
+    }
   });
 
   return id;

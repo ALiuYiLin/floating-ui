@@ -1,4 +1,4 @@
-import {computed, ref, toValue, watch, type Ref} from '@actview/core';
+import {computed, ref, toValue, watch, watchEffect, type Ref} from '@actview/core';
 import {isElement} from '@floating-ui/utils/dom';
 import type {VirtualElement} from '@floating-ui/dom';
 
@@ -136,21 +136,20 @@ export function useFloating<RT extends ReferenceType = ReferenceType>({
     nodeId: computed(() => toValue(nodeId)),
   };
 
-  // React 版（无依赖 layout effect）：同步 floatingContext 到 tree 节点
-  watch(
-    [rootContext.dataRef],
-    () => {
-      rootContext.dataRef.value.floatingContext = context;
+  // React 版（无依赖 layout effect）：同步 floatingContext 到 tree 节点。
+  // 用 watchEffect（追踪 dataRef / nodesRef / nodeId）：addNode 更新 nodesRef
+  // 后自动重跑，确保 node.context 在节点注册后补设（watch([dataRef]) 只跑一次，
+  // 节点未注册时 find 不到 node）。
+  watchEffect(() => {
+    rootContext.dataRef.value.floatingContext = context;
 
-      const node = tree?.nodesRef.value.find(
-        (node) => node.id === toValue(nodeId),
-      );
-      if (node) {
-        node.context = context;
-      }
-    },
-    {immediate: true},
-  );
+    const node = tree?.nodesRef.value.find(
+      (node) => node.id === toValue(nodeId),
+    );
+    if (node) {
+      node.context = context;
+    }
+  });
 
   return {
     ...position,

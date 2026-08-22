@@ -1,4 +1,4 @@
-import {onMounted, ref, type Ref} from '@actview/core';
+import {ref, type Ref} from '@actview/core';
 
 /**
  * actview 版（upstream 为 React hook：React.useId / useFloatingId）。
@@ -20,16 +20,15 @@ const genId = () =>
 /**
  * Returns a stable unique id for the floating element.
  * @see https://floating-ui.com/docs/react-utils#useid
+ *
+ * actview 为客户端渲染（无 hydration 匹配需求），id 在 setup 同步生成，
+ * 保证父组件的 nodeId 在子组件挂载前就绪（FloatingNode 的 value.id /
+ * useFloatingParentNodeId 依赖它；延迟到 onMounted 会让嵌套 FloatingTree
+ * 判断读到 null，产生双 FloatingTree）。
  */
 export function useId(): Ref<string | undefined> {
-  const id = ref<string | undefined>(serverHandoffComplete ? genId() : undefined);
-
-  onMounted(() => {
-    serverHandoffComplete = true;
-    if (id.value == null) {
-      id.value = genId();
-    }
-  });
+  const id = ref<string | undefined>(genId());
+  serverHandoffComplete = true;
 
   return id;
 }

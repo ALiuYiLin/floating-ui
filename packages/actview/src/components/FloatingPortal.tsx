@@ -114,7 +114,9 @@ export function useFloatingPortalNode(
     portalNode.value?.remove();
   });
 
-  // React 版两个创建 effect（id 分支 + root 分支）
+  // React 版两个创建 effect（id 分支 + root 分支）。
+  // immediate：uniqueId 由 useId 同步生成（不再变化），非 immediate 的 watch
+  // 不会触发（依赖不变），portalNode 将永不创建。
   watch(
     () => [
       id,
@@ -165,6 +167,7 @@ export function useFloatingPortalNode(
       portalNodeRef.value = subRoot;
       portalNode.value = subRoot;
     },
+    {immediate: true},
   );
 
   return portalNode;

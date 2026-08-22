@@ -726,7 +726,7 @@ export const FloatingFocusManager = defineComponent(function (
           return el && el.isConnected ? el : fallbackEl;
         }
 
-        return returnFocusRef.value.value || fallbackEl;
+        return returnFocusRef.value?.value || fallbackEl;
       }
 
       cleanupReturnFocus = () => {
