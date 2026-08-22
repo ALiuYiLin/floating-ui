@@ -180,10 +180,9 @@ export function useListItem(props: UseListItemProps = {}): {
     () => {
       const node = componentRef.value;
       const index = node ? listContext.value.map.get(node) : null;
-      console.log('[debug useListItem map] node:', !!node, 'index:', index);
       if (index != null) {
         indexRef.value = index;
-        listContext.value.elementsRef.value[index] = node;
+        listContext.value.elementsRef.value[index] = node as HTMLElement;
         if (listContext.value.labelsRef) {
           const isLabelDefined = label !== undefined;
           listContext.value.labelsRef.value[index] = isLabelDefined

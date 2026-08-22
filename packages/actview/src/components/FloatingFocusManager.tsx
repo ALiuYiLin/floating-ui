@@ -4,6 +4,7 @@ import {
   onUnmounted,
   onWatcherCleanup,
   ref,
+  toValue,
   watch,
   type Ref,
 } from '@actview/core';
@@ -231,21 +232,40 @@ export interface FloatingFocusManagerProps {
 export const FloatingFocusManager = defineComponent(function (
   props: FloatingFocusManagerProps,
 ) {
-  const {
-    context,
-    children,
-    disabled = false,
-    order = ['content'],
-    guards: _guards = true,
-    initialFocus = 0,
-    returnFocus = true,
-    restoreFocus = false,
-    modal = true,
-    visuallyHiddenDismiss = false,
-    closeOnFocusOut = true,
-    outsideElementsInert = false,
-    getInsideElements: _getInsideElements = () => [],
-  } = props;
+  const {context, children} = props;
+
+  // 标量 props 响应式同步：父组件/测试可能传 Ref（如 disabled={disabled}）或
+  // 通过 rerender 更新 props。传 Ref 时 computed 的依赖收集对「RefImpl 引用
+  // 本身」不变不触发（actview shallowReactive 不解包 Ref），改用
+  // ref + watch(() => toValue(...))——watch getter 读 RefImpl.value 追踪内部
+  // 变化；传值时 props 代理变化同样触发。
+  const disabled = ref(toValue(props.disabled ?? false));
+  watch(
+    () => toValue(props.disabled ?? false),
+    (v) => {
+      disabled.value = v;
+    },
+  );
+  const order = computed<Array<'reference' | 'floating' | 'content'>>(
+    () => props.order ?? ['content'],
+  );
+  const guardsRaw = computed(() => props.guards ?? true);
+  const initialFocus = computed(() => props.initialFocus ?? 0);
+  // returnFocus 每次读取 props（React 版每次渲染读取 props）：computed 缓存
+  // 与 shallowReactive props 的依赖追踪存在时序问题（computed 首次求值可能
+  // 早于 props 写入完成），事件回调里读到的 stale 值会导致 returnFocus 失效。
+  const getReturnFocus = () => props.returnFocus ?? true;
+  const restoreFocus = computed(() => toValue(props.restoreFocus ?? false));
+  const modal = computed(() => props.modal ?? true);
+  const visuallyHiddenDismiss = computed(
+    () => props.visuallyHiddenDismiss ?? false,
+  );
+  const closeOnFocusOut = computed(() => props.closeOnFocusOut ?? true);
+  const outsideElementsInert = computed(
+    () => props.outsideElementsInert ?? false,
+  );
+  const getInsideElements = props.getInsideElements ?? (() => []);
+
   const {
     open,
     onOpenChange,
@@ -255,26 +275,33 @@ export const FloatingFocusManager = defineComponent(function (
   } = context;
 
   const getNodeId = () => dataRef.value.floatingContext?.nodeId.value;
-  const getInsideElements = _getInsideElements;
 
-  const ignoreInitialFocus = typeof initialFocus === 'number' && initialFocus < 0;
+  const ignoreInitialFocus = computed(
+    () => typeof initialFocus.value === 'number' && initialFocus.value < 0,
+  );
   // If the reference is a combobox and is typeable (e.g. input/textarea),
   // there are different focus semantics. The guards should not be rendered, but
   // aria-hidden should be applied to all nodes still. Further, the visually
   // hidden dismiss button should only appear at the end of the list, not the
   // start.
   const isUntrappedTypeableCombobox = computed(
-    () => isTypeableCombobox(domReference.value) && ignoreInitialFocus,
+    () => isTypeableCombobox(domReference.value) && ignoreInitialFocus.value,
   );
 
   // Force the guards to be rendered if the `inert` attribute is not supported.
   const inertSupported = supportsInert();
-  const guards = inertSupported ? _guards : true;
-  const useInert = !guards || (inertSupported && outsideElementsInert);
+  const guards = computed(() => (inertSupported ? guardsRaw.value : true));
+  const useInert = computed(
+    () => !guards.value || (inertSupported && outsideElementsInert.value),
+  );
 
-  const orderRef = computed(() => order);
-  const initialFocusRef = computed(() => initialFocus);
-  const returnFocusRef = computed(() => returnFocus);
+  const orderRef = order;
+  const initialFocusRef = initialFocus;
+  const returnFocusRef = {
+    get value() {
+      return getReturnFocus();
+    },
+  } as Ref<boolean | HTMLElement | null>;
 
   const tree = useFloatingTree();
   const portalContext = usePortalContext();
@@ -324,8 +351,8 @@ export const FloatingFocusManager = defineComponent(function (
       cleanupKeydown?.();
       cleanupKeydown = undefined;
 
-      if (disabled) return;
-      if (!modal) return;
+      if (disabled.value) return;
+      if (!modal.value) return;
 
       function onKeyDown(event: KeyboardEvent) {
         if (event.key === 'Tab') {
@@ -381,7 +408,7 @@ export const FloatingFocusManager = defineComponent(function (
       cleanupFocusIn?.();
       cleanupFocusIn = undefined;
 
-      if (disabled) return;
+      if (disabled.value) return;
       if (!floating.value) return;
 
       function handleFocusIn(event: FocusEvent) {
@@ -401,15 +428,17 @@ export const FloatingFocusManager = defineComponent(function (
   );
 
   // React 版 effect：focusout 关闭逻辑
+  // 依赖含 disabled：keepMounted 场景初始 disabled=true 时跳过注册，
+  // 打开（disabled=false）后需重新注册 focusout 监听。
   let cleanupFocusOut: (() => void) | undefined;
   watch(
-    [domReference, floating, portalContext],
+    [domReference, floating, portalContext, disabled],
     () => {
       cleanupFocusOut?.();
       cleanupFocusOut = undefined;
 
-      if (disabled) return;
-      if (!closeOnFocusOut) return;
+      if (disabled.value) return;
+      if (!closeOnFocusOut.value) return;
 
       // In Safari, buttons lose focus when pressing them.
       function handlePointerDown() {
@@ -460,7 +489,7 @@ export const FloatingFocusManager = defineComponent(function (
           // Restore focus to the previous tabbable element index to prevent
           // focus from being lost outside the floating tree.
           if (
-            restoreFocus &&
+            restoreFocus.value &&
             currentTarget !== domReference.value &&
             !target?.isConnected &&
             activeElement(getDocument(floatingFocusElement.value)) ===
@@ -494,7 +523,7 @@ export const FloatingFocusManager = defineComponent(function (
           // Focus did not move inside the floating tree, and there are no
           // tabbable portal guards to handle closing.
           if (
-            (isUntrappedTypeableCombobox.value ? true : !modal) &&
+            (isUntrappedTypeableCombobox.value ? true : !modal.value) &&
             relatedTarget &&
             movedToUnrelatedNode &&
             !isPointerDownRef.value &&
@@ -574,7 +603,7 @@ export const FloatingFocusManager = defineComponent(function (
       cleanupMarkOthers?.();
       cleanupMarkOthers = undefined;
 
-      if (disabled) return;
+      if (disabled.value) return;
       if (!floating.value) return;
 
       // Don't hide portals nested within the parent portal.
@@ -609,17 +638,19 @@ export const FloatingFocusManager = defineComponent(function (
       ].filter((x): x is Element => x != null);
 
       cleanupMarkOthers =
-        modal || isUntrappedTypeableCombobox.value
-          ? markOthers(insideElements, !useInert, useInert)
+        modal.value || isUntrappedTypeableCombobox.value
+          ? markOthers(insideElements, !useInert.value, useInert.value)
           : markOthers(insideElements);
     },
   );
 
   // React 版 `useModernLayoutEffect`：初始 focus
+  // 依赖含 disabled：React 版 effect 依赖 disabled，disabled 变化（如
+  // keepMounted 场景 disabled={!open}）需重新评估初始聚焦。
   watch(
-    [open, floatingFocusElement],
+    [open, floatingFocusElement, disabled],
     () => {
-      if (disabled || !isHTMLElement(floatingFocusElement.value)) return;
+      if (disabled.value || !isHTMLElement(floatingFocusElement.value)) return;
 
       const doc = getDocument(floatingFocusElement.value);
       const previouslyFocusedElement = activeElement(doc);
@@ -643,7 +674,7 @@ export const FloatingFocusManager = defineComponent(function (
           activeElement(doc),
         );
 
-        if (!ignoreInitialFocus && !focusAlreadyInsideFloatingEl && open.value) {
+        if (!ignoreInitialFocus.value && !focusAlreadyInsideFloatingEl && open.value) {
           enqueueFocus(elToFocus, {
             preventScroll: elToFocus === floatingFocusElement.value,
           });
@@ -654,14 +685,18 @@ export const FloatingFocusManager = defineComponent(function (
   );
 
   // React 版 `useModernLayoutEffect`：returnFocus 管理
+  // 依赖含 disabled：disabled 变化（keepMounted 场景 disabled={!open}）时
+  // React 版 effect 重跑并执行旧 cleanup（returnFocus）。actview 的 disabled
+  // 同步 watch 与 returnFocus watch 同属 pre flush，顺序不保证——disabled
+  // 变化必须显式触发本 watch，否则打开时 disabled 尚未同步导致 cleanup 未注册。
   let cleanupReturnFocus: (() => void) | undefined;
   watch(
-    [open, floatingFocusElement, domReference],
+    [open, floatingFocusElement, domReference, disabled],
     () => {
       cleanupReturnFocus?.();
       cleanupReturnFocus = undefined;
 
-      if (disabled || !floatingFocusElement.value) return;
+      if (disabled.value || !floatingFocusElement.value) return;
 
       const doc = getDocument(floatingFocusElement.value);
       const previouslyFocusedElement = activeElement(doc);
@@ -730,7 +765,12 @@ export const FloatingFocusManager = defineComponent(function (
           return el && el.isConnected ? el : fallbackEl;
         }
 
-        return returnFocusRef.value?.value || fallbackEl;
+        const raw = returnFocusRef.value;
+        const el =
+          raw && typeof raw === 'object' && '__v_isRef' in raw
+            ? (raw as unknown as Ref<HTMLElement | null>).value
+            : (raw as HTMLElement | null);
+        return el || fallbackEl;
       }
 
       cleanupReturnFocus = () => {
@@ -773,22 +813,31 @@ export const FloatingFocusManager = defineComponent(function (
     },
   );
 
-  // React 版 effect [disabled]：preventReturnFocus 重置
-  queueMicrotask(() => {
-    preventReturnFocusRef.value = false;
-  });
+  // React 版 effect [disabled]：preventReturnFocus 重置。
+  // disabled 变化时重置 preventReturnFocus（React 版 effect 依赖 disabled 重跑）；
+  // 否则 keepMounted 场景下 tab 移出关闭设置的 preventReturnFocus=true 会一直
+  // 残留，导致后续 Escape 关闭时 returnFocus 被跳过。
+  watch(
+    disabled,
+    () => {
+      queueMicrotask(() => {
+        preventReturnFocusRef.value = false;
+      });
+    },
+    {immediate: true},
+  );
 
   // React 版 `useModernLayoutEffect`：同步 context & modal 到 FloatingPortal
   watch(
     [portalContext, open, domReference],
     () => {
-      if (disabled) return;
+      if (disabled.value) return;
       const currentPortal = portalContext.value;
       if (!currentPortal) return;
 
       currentPortal.setFocusManagerState({
-        modal,
-        closeOnFocusOut,
+        modal: modal.value,
+        closeOnFocusOut: closeOnFocusOut.value,
         open: open.value,
         onOpenChange,
         domReference: domReference.value,
@@ -801,10 +850,12 @@ export const FloatingFocusManager = defineComponent(function (
   );
 
   // React 版 `useModernLayoutEffect`：handleTabIndex
+  // 依赖含 disabled：disabled 变化（keepMounted 场景）时需重设 tabIndex，
+  // 否则聚焦 floating（无 tabIndex 的 div）在 jsdom 下无效。
   watch(
-    floatingFocusElement,
+    [floatingFocusElement, disabled],
     () => {
-      if (disabled) return;
+      if (disabled.value) return;
       if (!floatingFocusElement.value) return;
       handleTabIndex(floatingFocusElement.value, orderRef);
     },
@@ -813,14 +864,14 @@ export const FloatingFocusManager = defineComponent(function (
 
   const shouldRenderGuards = computed(
     () =>
-      !disabled &&
-      guards &&
-      (modal ? !isUntrappedTypeableCombobox.value : true) &&
-      (isInsidePortal.value || modal),
+      !disabled.value &&
+      guards.value &&
+      (modal.value ? !isUntrappedTypeableCombobox.value : true) &&
+      (isInsidePortal.value || modal.value),
   );
 
   function renderDismissButton(location: 'start' | 'end') {
-    if (disabled || !visuallyHiddenDismiss || !modal) {
+    if (disabled.value || !visuallyHiddenDismiss.value || !modal.value) {
       return null;
     }
 
@@ -852,10 +903,10 @@ export const FloatingFocusManager = defineComponent(function (
           data-type="inside"
           ref={mergedBeforeGuardRef}
           onFocus={(event: FocusEvent) => {
-            if (modal) {
+            if (modal.value) {
               const els = getTabbableElements();
               enqueueFocus(
-                order[0] === 'reference' ? els[0] : els[els.length - 1],
+                order.value[0] === 'reference' ? els[0] : els[els.length - 1],
               );
             } else if (
               portalContext.value?.preserveTabOrder &&
@@ -882,20 +933,20 @@ export const FloatingFocusManager = defineComponent(function (
         will have a dismiss button.
       */}
       {!isUntrappedTypeableCombobox.value && renderDismissButton('start')}
-      {children}
+      {props.children}
       {renderDismissButton('end')}
       {shouldRenderGuards.value && (
         <FocusGuard
           data-type="inside"
           ref={mergedAfterGuardRef}
           onFocus={(event: FocusEvent) => {
-            if (modal) {
+            if (modal.value) {
               enqueueFocus(getTabbableElements()[0]);
             } else if (
               portalContext.value?.preserveTabOrder &&
               portalContext.value.portalNode
             ) {
-              if (closeOnFocusOut) {
+              if (closeOnFocusOut.value) {
                 preventReturnFocusRef.value = true;
               }
 
