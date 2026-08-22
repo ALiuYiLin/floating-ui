@@ -26,9 +26,12 @@
       "@floating-ui/react": ["../packages/react/src/index.ts"],
       "@floating-ui/react/*": ["../packages/react/src/*"],
       "@floating-ui/react-native": ["../packages/react-native/src/index.ts"],
+      "@floating-ui/actview": ["../packages/actview/src/index.ts"],
+      "@floating-ui/actview/*": ["../packages/actview/src/*"],
       "@floating-ui/react-native/*": ["../packages/react-native/src/*"],
       "config": ["./src/index.ts"],
       "config/*": ["./src/*"]
     }
   }
 }
+

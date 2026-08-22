@@ -14,11 +14,12 @@ import type {
   Dimensions,
   MiddlewareData,
   Placement,
+  Side,
   Strategy,
   VirtualElement,
 } from '@floating-ui/dom';
 
-export type {Dimensions};
+export type {Dimensions, Placement, Side};
 
 export type ReferenceType = Element | VirtualElement;
 
@@ -40,17 +41,17 @@ export interface ContextData {
 
 /**
  * 定位返回值子集（upstream 来自 @floating-ui/react-dom 的 UsePositionFloatingReturn）。
- * actview 版在 hooks 阶段实现，此处仅提供 utils 层需要的结构。
+ * actview 版响应式字段为 `Ref<T>`（.value），hooks 阶段实现 useFloating 时补全。
  */
 export interface UsePositionFloatingReturn {
-  x: number;
-  y: number;
-  placement: Placement;
-  strategy: Strategy;
-  middlewareData: MiddlewareData;
-  isPositioned: boolean;
+  x: Ref<number>;
+  y: Ref<number>;
+  placement: Ref<Placement>;
+  strategy: Ref<Strategy>;
+  middlewareData: Ref<MiddlewareData>;
+  isPositioned: Ref<boolean>;
   update(): void;
-  floatingStyles: Record<string, string | number>;
+  floatingStyles: Ref<Record<string, string | number>>;
 }
 
 export interface ExtendedRefs<RT extends ReferenceType = ReferenceType> {
@@ -63,9 +64,9 @@ export interface ExtendedRefs<RT extends ReferenceType = ReferenceType> {
 }
 
 export interface ExtendedElements<RT extends ReferenceType = ReferenceType> {
-  reference: ReferenceType | null;
-  floating: HTMLElement | null;
-  domReference: NarrowedElement<RT> | null;
+  reference: Ref<ReferenceType | null>;
+  floating: Ref<HTMLElement | null>;
+  domReference: Ref<Element | null>;
 }
 
 export type OpenChangeReason =
@@ -79,15 +80,15 @@ export type OpenChangeReason =
 
 export interface FloatingRootContext<RT extends ReferenceType = ReferenceType> {
   dataRef: Ref<ContextData>;
-  open: boolean;
+  open: Ref<boolean>;
   onOpenChange(open: boolean, event?: Event, reason?: OpenChangeReason): void;
   elements: {
-    domReference: Element | null;
-    reference: RT | null;
-    floating: HTMLElement | null;
+    domReference: Ref<Element | null>;
+    reference: Ref<RT | null>;
+    floating: Ref<HTMLElement | null>;
   };
   events: FloatingEvents;
-  floatingId: string | undefined;
+  floatingId: Ref<string | undefined>;
   refs: {
     setPositionReference(node: ReferenceType | null): void;
   };
@@ -97,12 +98,12 @@ export type FloatingContext<RT extends ReferenceType = ReferenceType> = Omit<
   UsePositionFloatingReturn,
   'refs' | 'elements'
 > & {
-  open: boolean;
+  open: Ref<boolean>;
   onOpenChange(open: boolean, event?: Event, reason?: OpenChangeReason): void;
   events: FloatingEvents;
   dataRef: Ref<ContextData>;
-  nodeId: string | undefined;
-  floatingId: string | undefined;
+  nodeId: Ref<string | undefined>;
+  floatingId: Ref<string | undefined>;
   refs: ExtendedRefs<RT>;
   elements: ExtendedElements<RT>;
 };
@@ -118,4 +119,25 @@ export interface FloatingTreeType<RT extends ReferenceType = ReferenceType> {
   events: FloatingEvents;
   addNode(node: FloatingNodeType): void;
   removeNode(node: FloatingNodeType): void;
+}
+
+/** 事件处理器 props 中用于标记 active/selected 的自定义键（ACTIVE_KEY / SELECTED_KEY） */
+export type ExtendedUserProps = {
+  active?: boolean | undefined;
+  selected?: boolean | undefined;
+};
+
+/**
+ * 交互 hook（useClick / useHover / useDismiss / useListNavigation 等）返回的
+ * 事件处理器集合，由调用方 spread 到 reference / floating / item 元素上。
+ * actview 版暂用宽松 `Record<string, unknown>`，接入 useInteractions 的
+ * mergeProps 时再精化为具体事件签名。
+ */
+export interface ElementProps {
+  reference?: Record<string, unknown> | undefined;
+  floating?: Record<string, unknown> | undefined;
+  item?:
+    | Record<string, unknown>
+    | ((props: ExtendedUserProps) => Record<string, unknown>)
+    | undefined;
 }
