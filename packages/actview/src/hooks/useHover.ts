@@ -153,7 +153,7 @@ export function useHover(
   const timeoutRef = ref(-1);
   const handlerRef = ref<((event: MouseEvent) => void) | undefined>(undefined);
   const restTimeoutRef = ref(-1);
-  const blockMouseMoveRef = ref(true);
+  const blockMouseMoveRef = ref(false);
   const performedPointerEventsMutationRef = ref(false);
   const unbindMouseMoveRef = ref(() => {});
   const restTimeoutPendingRef = ref(false);
