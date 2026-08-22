@@ -1,0 +1,75 @@
+{
+  "name": "@floating-ui/actview",
+  "version": "0.1.0",
+  "description": "Floating UI for ActView",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/floating-ui.actview.umd.js",
+  "module": "./dist/floating-ui.actview.esm.js",
+  "unpkg": "./dist/floating-ui.actview.umd.min.js",
+  "types": "./dist/floating-ui.actview.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": {
+        "types": "./dist/floating-ui.actview.d.mts",
+        "default": "./dist/floating-ui.actview.mjs"
+      },
+      "types": "./dist/floating-ui.actview.d.ts",
+      "module": "./dist/floating-ui.actview.esm.js",
+      "default": "./dist/floating-ui.actview.umd.js"
+    },
+    "./utils": {
+      "import": {
+        "types": "./dist/floating-ui.actview.utils.d.mts",
+        "default": "./dist/floating-ui.actview.utils.mjs"
+      },
+      "types": "./dist/floating-ui.actview.utils.d.ts",
+      "module": "./dist/floating-ui.actview.utils.esm.js",
+      "default": "./dist/floating-ui.actview.utils.umd.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "utils"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --ignore-path ../../.gitignore --write .",
+    "clean": "rimraf dist out-tsc utils",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "build": "rollup -c",
+    "typecheck": "tsc -b"
+  },
+  "license": "MIT",
+  "bugs": "https://github.com/floating-ui/floating-ui",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/floating-ui/floating-ui.git",
+    "directory": "packages/actview"
+  },
+  "homepage": "https://floating-ui.com",
+  "keywords": [
+    "tooltip",
+    "popover",
+    "dropdown",
+    "menu",
+    "popup",
+    "positioning",
+    "actview"
+  ],
+  "dependencies": {
+    "@actview/core": "link:../../../actview/packages/core",
+    "@floating-ui/dom": "workspace:^",
+    "@floating-ui/utils": "workspace:^",
+    "tabbable": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "config": "workspace:*",
+    "vitest": "^4.1.9"
+  }
+}
