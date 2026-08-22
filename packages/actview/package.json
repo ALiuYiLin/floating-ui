@@ -63,6 +63,7 @@
   ],
   "dependencies": {
     "@actview/core": "link:../../../actview/packages/core",
+    "@actview/jsx": "link:../../../actview/packages/jsx",
     "@floating-ui/dom": "workspace:^",
     "@floating-ui/utils": "workspace:^",
     "tabbable": "^6.0.0"

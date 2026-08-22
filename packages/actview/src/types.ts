@@ -70,13 +70,16 @@ export interface ExtendedElements<RT extends ReferenceType = ReferenceType> {
 }
 
 export type OpenChangeReason =
+  | 'outside-press'
+  | 'escape-key'
+  | 'ancestor-scroll'
+  | 'reference-press'
   | 'click'
   | 'hover'
   | 'focus'
-  | 'dismiss'
-  | 'safe-polygon'
+  | 'focus-out'
   | 'list-navigation'
-  | 'focus-out';
+  | 'safe-polygon';
 
 export interface FloatingRootContext<RT extends ReferenceType = ReferenceType> {
   dataRef: Ref<ContextData>;
@@ -130,14 +133,15 @@ export type ExtendedUserProps = {
 /**
  * 交互 hook（useClick / useHover / useDismiss / useListNavigation 等）返回的
  * 事件处理器集合，由调用方 spread 到 reference / floating / item 元素上。
- * actview 版暂用宽松 `Record<string, unknown>`，接入 useInteractions 的
- * mergeProps 时再精化为具体事件签名。
+ * reference / floating 可为 `Ref`（响应式派生，如 useRole 的 aria 属性随 open 变化）；
+ * mergeProps 用 `unref` 统一解包。item 的函数形态按调用传入的 active/selected 派生。
  */
 export interface ElementProps {
-  reference?: Record<string, unknown> | undefined;
-  floating?: Record<string, unknown> | undefined;
+  reference?: Record<string, unknown> | Ref<Record<string, unknown>> | undefined;
+  floating?: Record<string, unknown> | Ref<Record<string, unknown>> | undefined;
   item?:
     | Record<string, unknown>
+    | Ref<Record<string, unknown>>
     | ((props: ExtendedUserProps) => Record<string, unknown>)
     | undefined;
 }

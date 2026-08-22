@@ -1,3 +1,4 @@
+import {unref} from '@actview/core';
 import type {ElementProps, ExtendedUserProps} from '../types';
 import {ACTIVE_KEY, FOCUSABLE_ATTRIBUTE, SELECTED_KEY} from '../utils/constants';
 
@@ -8,6 +9,7 @@ import {ACTIVE_KEY, FOCUSABLE_ATTRIBUTE, SELECTED_KEY} from '../utils/constants'
  * - 无 useCallback/useMemo：getters 每次调用新建（actview setup 中调用一次，
  *   propsList 由调用方在 setup 中固定传入）
  * - `React.HTMLProps` → 宽松 `Record<string, unknown>`（ElementProps 同）
+ * - `value[elementKey]` 用 `unref` 解包（支持 useRole 等返回的响应式 `Ref` 派生）
  */
 
 function mergeProps<Key extends keyof ElementProps>(
@@ -32,7 +34,9 @@ function mergeProps<Key extends keyof ElementProps>(
     ...domUserProps,
     ...propsList
       .map((value) => {
-        const propsOrGetProps = value ? value[elementKey] : null;
+        const raw = value ? value[elementKey] : null;
+        // unref 解包响应式派生（useRole 等返回的 Ref/ComputedRef）
+        const propsOrGetProps = raw ? unref(raw as any) : null;
         if (typeof propsOrGetProps === 'function') {
           return userProps ? propsOrGetProps(userProps) : null;
         }
@@ -55,7 +59,7 @@ function mergeProps<Key extends keyof ElementProps>(
             }
 
             if (typeof value === 'function') {
-              map.get(key)?.push(value);
+              map.get(key)?.push(value as (...args: any[]) => void);
 
               acc[key] = (...args: any[]) => {
                 return map
