@@ -1,4 +1,4 @@
-import {computed, onUnmounted, ref, toValue, watch, type Ref} from '@actview/core';
+import {computed, nextTick, onUnmounted, ref, toValue, watch, type Ref} from '@actview/core';
 import {isHTMLElement} from '@floating-ui/utils/dom';
 import {
   activeElement,
@@ -472,13 +472,21 @@ export function useListNavigation(
               // Avoid letting the browser paint if possible on the first try,
               // otherwise use rAF. Don't try more than twice, since something
               // is wrong otherwise.
-              if (runs < 2) {
-                const scheduler = runs
-                  ? requestAnimationFrame
-                  : queueMicrotask;
+              // 先递增再调度：jsdom 的 rAF mock 同步执行回调（React 版真实 rAF
+              // 异步），若 runs++ 在调度之后，同步重入时 runs 未变会无限递归。
+              runs++;
+              if (runs <= 3) {
+                // actview 渲染发生在微任务链（React 版 act 内同步渲染）：
+                // queueMicrotask → nextTick（组件渲染后，listRef 已由 ref 回调填充）
+                // → rAF（浏览器帧，jsdom 同步）。
+                const scheduler =
+                  runs === 1
+                    ? queueMicrotask
+                    : runs === 2
+                      ? nextTick
+                      : requestAnimationFrame;
                 scheduler(waitForListPopulated);
               }
-              runs++;
             } else {
               indexRef.value =
                 keyRef.value == null ||
