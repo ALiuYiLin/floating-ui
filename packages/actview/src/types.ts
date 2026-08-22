@@ -12,8 +12,10 @@
 import type {Ref} from '@actview/core';
 import type {
   Dimensions,
+  Middleware,
   MiddlewareData,
   Placement,
+  Platform,
   Rect,
   Side,
   Strategy,
@@ -129,6 +131,45 @@ export interface FloatingTreeType<RT extends ReferenceType = ReferenceType> {
   addNode(node: FloatingNodeType): void;
   removeNode(node: FloatingNodeType): void;
 }
+
+/**
+ * `useFloating` 的选项（upstream 拆分自 @floating-ui/react-dom 的
+ * UseFloatingOptions 与 react 包的扩展）。
+ * actview 版：`open` / `nodeId` 支持 `Ref<T> | 值`；`rootContext` 可外部注入。
+ */
+export interface UseFloatingOptions<RT extends ReferenceType = ReferenceType> {
+  open?: boolean | Ref<boolean> | undefined;
+  onOpenChange?:
+    | ((open: boolean, event?: Event, reason?: OpenChangeReason) => void)
+    | undefined;
+  placement?: Placement | undefined;
+  strategy?: Strategy | undefined;
+  middleware?: Array<Middleware> | undefined;
+  platform?: Platform | undefined;
+  transform?: boolean | undefined;
+  whileElementsMounted?:
+    | ((
+        reference: RT,
+        floating: HTMLElement,
+        update: () => void,
+      ) => () => void)
+    | undefined;
+  elements?:
+    | {
+        reference?: RT | null | undefined;
+        floating?: HTMLElement | null | undefined;
+      }
+    | undefined;
+  rootContext?: FloatingRootContext<RT> | undefined;
+  nodeId?: string | Ref<string | undefined> | undefined;
+}
+
+export type UseFloatingReturn<RT extends ReferenceType = ReferenceType> =
+  UsePositionFloatingReturn & {
+    context: FloatingContext<RT>;
+    refs: ExtendedRefs<RT>;
+    elements: ExtendedElements<RT>;
+  };
 
 /** 事件处理器 props 中用于标记 active/selected 的自定义键（ACTIVE_KEY / SELECTED_KEY） */
 export type ExtendedUserProps = {
