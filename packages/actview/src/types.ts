@@ -22,7 +22,7 @@ import type {
   VirtualElement,
 } from '@floating-ui/dom';
 
-export type {Dimensions, Placement, Rect, Side};
+export type {Dimensions, Middleware, Placement, Rect, Side};
 export type {SafePolygonOptions} from './safePolygon';
 
 export type Delay =
