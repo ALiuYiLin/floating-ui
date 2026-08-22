@@ -131,14 +131,22 @@ export function useListItem(props: UseListItemProps = {}): {
   const itemRef = (node: HTMLElement | null) => {
     componentRef.value = node;
 
-    const index = indexRef.value;
-    if (index !== null) {
-      listContext.value.elementsRef.value[index] = node;
-      if (listContext.value.labelsRef) {
-        const isLabelDefined = label !== undefined;
-        listContext.value.labelsRef.value[index] = isLabelDefined
-          ? label
-          : node?.textContent ?? null;
+    // React 版在 layout effect 同步注册并重算 index；actview 的 watch 注册链
+    // 在微任务，可能晚于用户交互（如 focus 事件）。ref 回调时同步注册
+    // （register 幂等，Set 去重）并立即用重算后的 map 同步 index，保证
+    // 挂载后首个事件处理器读到正确的 index。
+    if (node) {
+      listContext.value.register(node);
+      const index = listContext.value.map.get(node);
+      if (index != null) {
+        indexRef.value = index;
+        listContext.value.elementsRef.value[index] = node;
+        if (listContext.value.labelsRef) {
+          const isLabelDefined = label !== undefined;
+          listContext.value.labelsRef.value[index] = isLabelDefined
+            ? label
+            : node?.textContent ?? null;
+        }
       }
     }
   };
@@ -172,6 +180,7 @@ export function useListItem(props: UseListItemProps = {}): {
     () => {
       const node = componentRef.value;
       const index = node ? listContext.value.map.get(node) : null;
+      console.log('[debug useListItem map] node:', !!node, 'index:', index);
       if (index != null) {
         indexRef.value = index;
         listContext.value.elementsRef.value[index] = node;

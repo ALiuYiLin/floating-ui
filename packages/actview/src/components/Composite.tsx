@@ -1,4 +1,4 @@
-import {computed, createContext, defineComponent, ref, type Ref} from '@actview/core';
+import {computed, createContext, defineComponent, ref, toValue, type Ref} from '@actview/core';
 import {
   createGridCellMap,
   findNonDisabledListIndex,
@@ -153,7 +153,7 @@ const allKeys = [...horizontalKeys, ...verticalKeys];
 export const Composite = defineComponent(function (props: CompositeProps) {
   const internalActiveIndex = ref(0);
   const activeIndex = computed(() =>
-    props.activeIndex ?? internalActiveIndex.value,
+    toValue(props.activeIndex) ?? internalActiveIndex.value,
   );
 
   const onNavigate = (index: number) => {
