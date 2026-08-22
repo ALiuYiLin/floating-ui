@@ -208,7 +208,9 @@ export interface FloatingPortalProps {
 export const FloatingPortal = defineComponent(function (
   props: FloatingPortalProps,
 ) {
-  const {children, id, root, preserveTabOrder = true} = props;
+  // children 必须每次渲染读取（actview props 响应式，setup 解构是首次快照）；
+  // FloatingPortal 的 children 常为条件渲染（如 {open && ...}）。
+  const {id, root, preserveTabOrder = true} = props;
 
   const portalNode = useFloatingPortalNode({id, root});
   const focusManagerState = ref<FocusManagerState>(null);
@@ -324,7 +326,7 @@ export const FloatingPortal = defineComponent(function (
         <span aria-owns={portalNode.value.id} style={HIDDEN_OWNER_STYLES} />
       )}
       {portalNode.value && (
-        <Teleport to={portalNode.value}>{children}</Teleport>
+        <Teleport to={portalNode.value}>{props.children}</Teleport>
       )}
       {shouldRenderGuards.value && portalNode.value && (
         <FocusGuard
