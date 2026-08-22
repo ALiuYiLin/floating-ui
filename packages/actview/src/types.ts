@@ -29,6 +29,8 @@ export type Delay =
   | number
   | Partial<{open: number | undefined; close: number | undefined}>;
 
+export type Alignment = 'start' | 'end';
+
 export type ReferenceType = Element | VirtualElement;
 
 export type NarrowedElement<T> = T extends Element ? T : Element;
