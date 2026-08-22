@@ -1,6 +1,6 @@
 import {computed, ref, toValue, type Ref} from '@actview/core';
 import {isElement} from '@floating-ui/utils/dom';
-import {useEffectEvent} from '@floating-ui/actview/utils';
+import {useEffectEvent} from '../utils';
 
 import type {
   ContextData,
@@ -22,7 +22,7 @@ import {error} from '../utils/log';
  *   支持 boolean 或 `Ref<boolean>`（useFloating 传 Ref 时响应式追踪）
  * - `elements` 字段为 `Ref`（reference / domReference 用 computed 派生，
  *   floating 固定为首次值——elementsProp 在 setup 解构固定）
- * - `useEffectEvent` 从 `@floating-ui/actview/utils` 导入
+ * - `useEffectEvent` 从 `../utils` 导入
  */
 
 export interface UseFloatingRootContextOptions {
@@ -50,7 +50,7 @@ export function useFloatingRootContext(
   const nested = useFloatingParentNodeId() != null;
 
   if (__DEV__) {
-    const optionDomReference = elementsProp.reference;
+    const optionDomReference = toValue(elementsProp.reference);
     if (optionDomReference && !isElement(optionDomReference)) {
       error(
         'Cannot pass a virtual element to the `elements.reference` option,',
@@ -63,7 +63,7 @@ export function useFloatingRootContext(
   const open = computed(() => toValue(options.open) ?? false);
 
   const positionReference = ref<ReferenceType | null>(
-    elementsProp.reference,
+    toValue(elementsProp.reference),
   );
 
   const onOpenChange = useEffectEvent(
@@ -80,12 +80,13 @@ export function useFloatingRootContext(
     },
   };
 
+  // elements 选项支持 Ref：测试/调用方可以传响应式元素（如 ref 回调设置的元素）
   const elements = {
     reference: computed(
-      () => positionReference.value || elementsProp.reference || null,
+      () => positionReference.value || toValue(elementsProp.reference) || null,
     ),
-    floating: ref(elementsProp.floating ?? null),
-    domReference: computed(() => elementsProp.reference ?? null),
+    floating: computed(() => toValue(elementsProp.floating) || null),
+    domReference: computed(() => toValue(elementsProp.reference) || null),
   };
 
   return {

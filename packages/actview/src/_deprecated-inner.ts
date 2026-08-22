@@ -6,7 +6,7 @@ import {
   type SideObject,
 } from '@floating-ui/dom';
 import {evaluate, max, min, round} from '@floating-ui/utils';
-import {getUserAgent} from '@floating-ui/actview/utils';
+import {getUserAgent} from './utils';
 import {ref, watch, type Ref} from '@actview/core';
 
 import type {

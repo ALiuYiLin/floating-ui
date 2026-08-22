@@ -6,7 +6,9 @@ export function getNodeChildren<RT extends ReferenceType = ReferenceType>(
   onlyOpenChildren = true,
 ): Array<FloatingNodeType<RT>> {
   const directChildren = nodes.filter(
-    (node) => node.parentId === id && (!onlyOpenChildren || node.context?.open),
+    (node) =>
+      node.parentId === id &&
+      (!onlyOpenChildren || node.context?.open.value),
   );
   return directChildren.flatMap((child) => [
     child,

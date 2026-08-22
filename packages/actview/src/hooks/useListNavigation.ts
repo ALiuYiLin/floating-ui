@@ -21,7 +21,7 @@ import {
   stopEvent,
   useEffectEvent,
   useLatestRef,
-} from '@floating-ui/actview/utils';
+} from '../utils';
 
 import {
   useFloatingParentNodeId,

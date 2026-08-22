@@ -9,7 +9,7 @@ import {
   isSafari,
   isTypeableElement,
   matchesFocusVisible,
-} from '@floating-ui/actview/utils';
+} from '../utils';
 
 import type {
   ElementProps,

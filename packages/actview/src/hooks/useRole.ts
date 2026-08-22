@@ -1,5 +1,5 @@
 import {computed} from '@actview/core';
-import {getFloatingFocusElement} from '@floating-ui/actview/utils';
+import {getFloatingFocusElement} from '../utils';
 
 import {useFloatingParentNodeId} from '../components/FloatingTree';
 import type {

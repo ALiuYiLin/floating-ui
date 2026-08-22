@@ -6,7 +6,7 @@ import {
   isMouseLikePointerType,
   useLatestRef,
   useEffectEvent,
-} from '@floating-ui/actview/utils';
+} from '../utils';
 
 import {
   useFloatingParentNodeId,

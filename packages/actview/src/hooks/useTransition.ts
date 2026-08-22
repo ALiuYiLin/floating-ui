@@ -1,5 +1,5 @@
 import {onUnmounted, ref, watch, type Ref} from '@actview/core';
-import {useLatestRef} from '@floating-ui/actview/utils';
+import {useLatestRef} from '../utils';
 
 import type {FloatingContext, Placement, ReferenceType, Side} from '../types';
 
@@ -11,7 +11,7 @@ import type {FloatingContext, Placement, ReferenceType, Side} from '../types';
  *   调用方渲染期读 `.value`
  * - `React.useEffect` / `useModernLayoutEffect` → `watch`（依赖追踪 + immediate）
  * - 无 ReactDOM.flushSync：rAF 回调里直接赋值，actview 自行调度渲染
- * - `useLatestRef` 从 `@floating-ui/actview/utils` 导入
+ * - `useLatestRef` 从 `../utils` 导入
  * - `React.CSSProperties` → `Record<string, string | number>`（actview 样式对象）
  */
 

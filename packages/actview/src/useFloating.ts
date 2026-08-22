@@ -16,7 +16,7 @@ import {
   type Platform,
   type Strategy,
 } from '@floating-ui/dom';
-import {useLatestRef} from '@floating-ui/actview/utils';
+import {useLatestRef} from './utils';
 
 import type {ReferenceType} from './types';
 import {deepEqual} from './utils/deepEqual';

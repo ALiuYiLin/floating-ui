@@ -16,7 +16,7 @@ import {
   isEventTargetWithin,
   isRootElement,
   useEffectEvent,
-} from '@floating-ui/actview/utils';
+} from '../utils';
 
 import {useFloatingTree} from '../components/FloatingTree';
 import type {ElementProps, FloatingRootContext} from '../types';

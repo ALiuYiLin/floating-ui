@@ -1,6 +1,6 @@
 import {ref} from '@actview/core';
 import {isHTMLElement} from '@floating-ui/utils/dom';
-import {isMouseLikePointerType, isTypeableElement} from '@floating-ui/actview/utils';
+import {isMouseLikePointerType, isTypeableElement} from '../utils';
 
 import type {ElementProps, FloatingRootContext} from '../types';
 

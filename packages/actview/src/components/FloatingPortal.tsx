@@ -15,7 +15,7 @@ import {
   getNextTabbable,
   getPreviousTabbable,
   isOutsideEvent,
-} from '@floating-ui/actview/utils';
+} from '../utils';
 
 import {useId} from '../hooks/useId';
 import type {OpenChangeReason} from '../types';

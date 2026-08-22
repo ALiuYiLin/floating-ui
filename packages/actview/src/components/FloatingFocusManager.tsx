@@ -25,7 +25,7 @@ import {
   isVirtualClick,
   isVirtualPointerEvent,
   stopEvent,
-} from '@floating-ui/actview/utils';
+} from '../utils';
 
 import type {FloatingRootContext, OpenChangeReason} from '../types';
 import {createAttribute} from '../utils/createAttribute';

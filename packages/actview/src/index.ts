@@ -2,7 +2,7 @@
  * @floating-ui/actview — @floating-ui/react 的 actview 版。
  *
  * 导出面与 upstream `packages/react/src/index.ts` 对齐：
- * - utils 工具（`@floating-ui/actview/utils` 子路径同 `@floating-ui/react/utils`）
+ * - utils 工具（`./utils` 子路径同 `@floating-ui/react/utils`）
  * - 交互 hooks（useClick / useDismiss / useHover / useListNavigation / ...）
  * - 组件（FloatingTree / FloatingPortal / FloatingFocusManager / Composite / ...）
  * - safePolygon / inner / useInnerOffset

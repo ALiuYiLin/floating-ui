@@ -3,7 +3,7 @@ import {
   useEffectEvent,
   useLatestRef,
   stopEvent,
-} from '@floating-ui/actview/utils';
+} from '../utils';
 
 import type {ElementProps, FloatingRootContext} from '../types';
 import {clearTimeoutIfSet} from '../utils/clearTimeoutIfSet';
@@ -17,7 +17,7 @@ import {clearTimeoutIfSet} from '../utils/clearTimeoutIfSet';
  *   内部用 `toValue` 统一读取（传入 Ref 时 watch 响应式同步 prevIndexRef）
  * - `listRef` 为 `Ref<Array<string | null>>`（.value）
  * - 无 React 合成事件：onKeyDown 参数为原生 KeyboardEvent
- * - `useEffectEvent` / `useLatestRef` / `stopEvent` 从 `@floating-ui/actview/utils` 导入
+ * - `useEffectEvent` / `useLatestRef` / `stopEvent` 从 `../utils` 导入
  */
 
 export interface UseTypeaheadProps {

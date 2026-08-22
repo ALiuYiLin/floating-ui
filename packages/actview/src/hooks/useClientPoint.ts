@@ -5,7 +5,7 @@ import {
   getTarget,
   isMouseLikePointerType,
   useEffectEvent,
-} from '@floating-ui/actview/utils';
+} from '../utils';
 
 import type {ContextData, ElementProps, FloatingRootContext} from '../types';
 
@@ -16,7 +16,7 @@ import type {ContextData, ElementProps, FloatingRootContext} from '../types';
  * - `React.useState` → `ref()`；`React.useRef` → `ref()`
  * - `React.useEffect` / `useModernLayoutEffect` → `watch`（依赖追踪 + immediate）
  * - `React.useCallback` → 普通函数；`useEffectEvent` / `contains` / `getTarget` /
- *   `isMouseLikePointerType` 从 `@floating-ui/actview/utils` 导入
+ *   `isMouseLikePointerType` 从 `../utils` 导入
  * - 无 React 合成事件：处理器参数为原生事件
  * - props 标量（x / y / axis / enabled）在 setup 解构固定；响应式状态
  *   （open / floating / pointerType）通过 Ref `.value` 读取

@@ -1,5 +1,5 @@
 import {defineComponent, onMounted, ref, type Ref} from '@actview/core';
-import {isSafari} from '@floating-ui/actview/utils';
+import {isSafari} from '../utils';
 
 import {createAttribute} from '../utils/createAttribute';
 

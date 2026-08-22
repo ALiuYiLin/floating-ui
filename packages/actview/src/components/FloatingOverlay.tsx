@@ -1,5 +1,5 @@
 import {defineComponent, onWatcherCleanup, watch, type Ref} from '@actview/core';
-import {getPlatform} from '@floating-ui/actview/utils';
+import {getPlatform} from '../utils';
 
 /**
  * actview 版（upstream 为 React 组件）。

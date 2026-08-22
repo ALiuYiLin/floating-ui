@@ -9,7 +9,7 @@ import {
   getMinListIndex,
   isIndexOutOfListBounds,
   isListIndexDisabled,
-} from '@floating-ui/actview/utils';
+} from '../utils';
 
 import {useMergeRefs} from '../hooks/useMergeRefs';
 import type {Dimensions} from '../types';
