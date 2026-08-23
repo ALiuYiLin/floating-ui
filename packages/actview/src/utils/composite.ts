@@ -333,16 +333,55 @@ export function isListIndexDisabled(
   index: number,
   disabledIndices?: DisabledIndices,
 ) {
-  if (typeof disabledIndices === 'function') {
-    return disabledIndices(index);
-  } else if (disabledIndices) {
-    return disabledIndices.includes(index);
+  const isExplicitlyDisabled =
+    typeof disabledIndices === 'function'
+      ? disabledIndices(index)
+      : (disabledIndices?.includes(index) ?? false);
+
+  if (isExplicitlyDisabled) {
+    return true;
   }
 
   const element = listRef.value[index];
+  if (!element) {
+    return false;
+  }
+
+  if (!isElementVisible(element)) {
+    return true;
+  }
+
+  // A natively disabled element can never receive focus, so it must always be
+  // skipped, even when `disabledIndices` marks it as enabled. Only
+  // `aria-disabled` items can be focusable-while-disabled.
+  if (element.matches(':disabled')) {
+    return true;
+  }
+
   return (
-    element == null ||
-    element.hasAttribute('disabled') ||
-    element.getAttribute('aria-disabled') === 'true'
+    !disabledIndices &&
+    (element.hasAttribute('disabled') ||
+      element.getAttribute('aria-disabled') === 'true')
   );
+}
+
+export function isHiddenByStyles(styles: CSSStyleDeclaration) {
+  return styles.visibility === 'hidden' || styles.visibility === 'collapse';
+}
+
+export function isElementVisible(
+  element: Element | null,
+  styles: CSSStyleDeclaration | null = element
+    ? getComputedStyle(element)
+    : null,
+) {
+  if (!element || !element.isConnected || !styles || isHiddenByStyles(styles)) {
+    return false;
+  }
+
+  if (typeof element.checkVisibility === 'function') {
+    return element.checkVisibility();
+  }
+
+  return styles.display !== 'none' && styles.display !== 'contents';
 }
