@@ -107,6 +107,13 @@ export function cleanup() {
     coreUnmount(vnode, container);
     container.remove();
   }
+  // actview core 的 unmount 只递归组件 subTree 一层：嵌套在 Fragment / 原生
+  // 元素里的子组件（如 FloatingPortal 渲到 body 的 portal node）的 onUnmounted
+  // 不会被根卸载触发，portal node 残留在 body（jsdom 下同样存在，但不影响
+  // 查询断言；浏览器模式会跨用例污染 getByText 等）。统一清理保证测试间隔离。
+  document.body
+    .querySelectorAll('[data-floating-ui-portal]')
+    .forEach((node) => node.remove());
 }
 
 /** React act() 等价：执行回调并等待 actview 响应式更新 flush */

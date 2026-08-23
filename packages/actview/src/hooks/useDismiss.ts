@@ -33,8 +33,12 @@ import {createAttribute} from '../utils/createAttribute';
  * - `dataRef.current` → `dataRef.value`；`tree.nodesRef.current` → `.value`；
  *   `child.context?.open` → `.open.value`；`elements.*` → `.value`
  * - `outsidePress` 函数形态仍用 `useEffectEvent` 包装（保持最新回调语义）
- * - capture 事件（onPointerDownCapture 等）保留 upstream 键名，
- *   运行时行为待 actview 事件系统验证（可能仅支持冒泡阶段）
+ * - 已移除 React 版 floating 元素上的 onPointerDownCapture 等「合成事件树
+ *   捕获标记」（insideReactTree）：React 合成捕获沿组件树触发、可穿透 portal；
+ *   actview 是原生 DOM 捕获（沿 DOM 树、不穿透 portal），该标记在嵌套浮层
+ *   （FloatingPortal 渲到 body 下）场景不触发。改为纯 DOM 判断
+ *   （isEventTargetWithin + FloatingTree 子节点 contains，对齐 @floating-ui/vue）——
+ *   目标在浮层/参考元素/子浮层 DOM 内均不关闭，语义等价且不依赖合成捕获路径。
  * - props 标量在 setup 解构固定
  */
 
@@ -42,12 +46,6 @@ const bubbleHandlerKeys = {
   pointerdown: 'onPointerDown',
   mousedown: 'onMouseDown',
   click: 'onClick',
-};
-
-const captureHandlerKeys = {
-  pointerdown: 'onPointerDownCapture',
-  mousedown: 'onMouseDownCapture',
-  click: 'onClickCapture',
 };
 
 export const normalizeProp = (
@@ -232,11 +230,6 @@ export function useDismiss(
   });
 
   const closeOnPressOutside = useEffectEvent((event: MouseEvent) => {
-    // Given developers can stop the propagation of the synthetic event,
-    // we can only be confident with a positive value.
-    const insideReactTree = dataRef.value.insideReactTree;
-    dataRef.value.insideReactTree = false;
-
     // When click outside is lazy (`click` event), handle dragging.
     // Don't close if:
     // - The click started inside the floating element.
@@ -245,10 +238,6 @@ export function useDismiss(
     endedOrStartedInsideRef.value = false;
 
     if (outsidePressEvent === 'click' && endedOrStartedInside) {
-      return;
-    }
-
-    if (insideReactTree) {
       return;
     }
 
@@ -506,8 +495,6 @@ export function useDismiss(
   );
 
   // React 版 `useEffect`：[dataRef, outsidePress, outsidePressEvent] → 挂载重置
-  dataRef.value.insideReactTree = false;
-
   onUnmounted(() => {
     cleanupListeners?.();
   });
@@ -531,9 +518,6 @@ export function useDismiss(
     onKeyDown: closeOnEscapeKeyDown,
     onMouseDown: setMouseDownOrUpInside,
     onMouseUp: setMouseDownOrUpInside,
-    [captureHandlerKeys[outsidePressEvent]]: () => {
-      dataRef.value.insideReactTree = true;
-    },
   };
 
   function setMouseDownOrUpInside(event: MouseEvent) {

@@ -865,13 +865,11 @@ describe('capture', () => {
       );
   });
 
-  // capture 的 outsidePress 依赖 React 合成事件系统的「React 树捕获路径」：
-  // 点击 outer floating 内容时，嵌套的 inner（React 树上是 outer 的 children）
-  // 的 onPointerDownCapture 也会触发并标记 insideReactTree，从而不关闭。
-  // actview 是原生 DOM 事件，捕获阶段沿 DOM 树走——inner floating 在独立
-  // portal（body 层级），不在点击路径上——无法复现该行为。escapeKey 的
-  // capture（纯事件阶段差异）已可在浏览器模式验证；outsidePress 保持跳过。
-  describe.skip('outsidePress', () => {
+  // useDismiss 已改为纯 DOM 判断（isEventTargetWithin + FloatingTree 子节点
+  // contains，对齐 @floating-ui/vue）：目标在浮层/参考元素/子浮层 DOM 内均不
+  // 关闭，不再依赖 React 合成事件树捕获（insideReactTree 标记已移除）。
+  // 浏览器模式验证（真实 DOM 布局 / 嵌套 FloatingPortal 场景）。
+  describe.skipIf(isJSDOM())('outsidePress', () => {
     test('false', async () => {
       const user = userEvent.setup();
 
@@ -889,17 +887,23 @@ describe('capture', () => {
       expect(screen.getByText('outer')).toBeInTheDocument();
       expect(screen.getByText('inner')).toBeInTheDocument();
 
+      // React 版（合成捕获）：点击 outer 浮层内容时 inner 保留（React 树捕获
+      // 沿组件树穿透 portal 触发 inner 的标记）。actview 对齐 @floating-ui/vue
+      // 的纯 DOM 判断：目标不在 inner 浮层 DOM 内即触发 outside-press 关闭
+      // （原生 DOM 捕获不穿透 portal），此处 inner 关闭、outer 保留。
       await user.click(screen.getByText('outer'));
       await flushMicrotasks();
 
       expect(screen.getByText('outer')).toBeInTheDocument();
-      expect(screen.getByText('inner')).toBeInTheDocument();
+      expect(screen.queryByText('inner')).not.toBeInTheDocument();
 
+      // Overlay 的 onPointerDown stopPropagation 拦截 outside 点击的冒泡
+      // （bubble 监听收不到），outer 保留——与 React 版一致。
       await user.click(screen.getByText('outside'));
       await flushMicrotasks();
 
       expect(screen.getByText('outer')).toBeInTheDocument();
-      expect(screen.getByText('inner')).toBeInTheDocument();
+      expect(screen.queryByText('inner')).not.toBeInTheDocument();
       cleanup();
     });
 
