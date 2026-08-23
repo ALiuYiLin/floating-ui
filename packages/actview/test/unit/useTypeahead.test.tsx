@@ -5,6 +5,7 @@ import {useClick, useFloating, useInteractions, useTypeahead} from '../../src';
 import type {UseTypeaheadProps} from '../../src/hooks/useTypeahead';
 import {act, cleanup, flushMicrotasks, render, screen} from './utils';
 import userEvent from '@testing-library/user-event';
+import {Main as MenuMain} from '../visual/components/Menu';
 
 vi.useFakeTimers({shouldAdvanceTime: true});
 
@@ -281,10 +282,66 @@ test('onTypingChange is called when typing starts or stops', async () => {
   cleanup();
 });
 
-// 以下两个测试依赖 visual/components/Menu.tsx（React 组件，未迁移到 actview），
-// 跳过；useTypeahead 在真实菜单中的行为由上面的 Combobox/Select 场景覆盖。
-test.skip('Menu - skips disabled items and opens submenu on space if no match', async () => {});
-test.skip('Menu - resets once a match is no longer found', async () => {});
+test('Menu - skips disabled items and opens submenu on space if no match', async () => {
+  vi.useRealTimers();
+  const user = userEvent.setup();
+
+  render(<MenuMain />);
+  await flushMicrotasks();
+
+  await user.click(screen.getByText('Edit'));
+  await flushMicrotasks();
+
+  expect(screen.getByRole('menu')).toBeInTheDocument();
+
+  await user.keyboard('c');
+  await flushMicrotasks();
+
+  expect(screen.getByText('Copy as')).toHaveFocus();
+
+  await user.keyboard('opy as ');
+  await flushMicrotasks();
+
+  expect(screen.getByText('Copy as').getAttribute('aria-expanded')).toBe(
+    'false',
+  );
+
+  await user.keyboard(' ');
+  await flushMicrotasks();
+
+  expect(screen.getByText('Copy as').getAttribute('aria-expanded')).toBe(
+    'true',
+  );
+
+  cleanup();
+  vi.useFakeTimers({shouldAdvanceTime: true});
+});
+
+test('Menu - resets once a match is no longer found', async () => {
+  vi.useRealTimers();
+  const user = userEvent.setup();
+
+  render(<MenuMain />);
+  await flushMicrotasks();
+
+  await user.click(screen.getByText('Edit'));
+  await flushMicrotasks();
+
+  expect(screen.getByRole('menu')).toBeInTheDocument();
+
+  await user.keyboard('undr');
+  await flushMicrotasks();
+
+  expect(screen.getByText('Undo')).toHaveFocus();
+
+  await user.keyboard('r');
+  await flushMicrotasks();
+
+  expect(screen.getByText('Redo')).toHaveFocus();
+
+  cleanup();
+  vi.useFakeTimers({shouldAdvanceTime: true});
+});
 
 test('typing spaces on <div> references does not open the menu', async () => {
   const spy = vi.fn();
