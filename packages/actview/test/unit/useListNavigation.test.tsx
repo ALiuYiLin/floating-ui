@@ -69,6 +69,15 @@ const App = defineComponent(function (
               <li
                 data-testid={`item-${index}`}
                 aria-selected={activeIndex.value === index}
+                aria-disabled={
+                  typeof props.disabledIndices === 'function'
+                    ? props.disabledIndices(index)
+                      ? 'true'
+                      : undefined
+                    : props.disabledIndices?.includes(index)
+                      ? 'true'
+                      : undefined
+                }
                 key={string}
                 tabIndex={-1}
                 {...getItemProps({

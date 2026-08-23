@@ -42,6 +42,7 @@ export {useHover} from './hooks/useHover';
 export {useId} from './hooks/useId';
 export {useInteractions} from './hooks/useInteractions';
 export {useListNavigation} from './hooks/useListNavigation';
+export {gridNavigation} from './hooks/gridNavigation';
 export {useMergeRefs} from './hooks/useMergeRefs';
 export {useRole} from './hooks/useRole';
 export {useTransitionStatus, useTransitionStyles} from './hooks/useTransition';

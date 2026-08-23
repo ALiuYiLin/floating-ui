@@ -210,27 +210,28 @@ export function useDismiss(
       ? getNodeChildren(tree.nodesRef.value, nodeId, false)
       : [];
 
-    if (!escapeKeyBubbles) {
-      event.stopPropagation();
+    // 一次 Escape 只关最内层：无论 bubbles 都检查 open 子级（base-ui 测试
+    // 意图：`bubbles: true` 只影响事件传播，不影响 Escape 的层级关闭）。
+    if (children.length > 0) {
+      let shouldDismiss = true;
 
-      if (children.length > 0) {
-        let shouldDismiss = true;
-
-        children.forEach((child) => {
-          if (
-            (child.context?.open.value ||
-              escapeKeyClosedNodes.has(child.id as string)) &&
-            !child.context!.dataRef.value.__escapeKeyBubbles
-          ) {
-            shouldDismiss = false;
-            return;
-          }
-        });
-
-        if (!shouldDismiss) {
+      children.forEach((child) => {
+        if (
+          child.context?.open.value ||
+          escapeKeyClosedNodes.has(child.id as string)
+        ) {
+          shouldDismiss = false;
           return;
         }
+      });
+
+      if (!shouldDismiss) {
+        return;
       }
+    }
+
+    if (!escapeKeyBubbles) {
+      event.stopPropagation();
     }
 
     // 标记本节点在本次 Escape 中已关闭：外层判断时视为"仍打开"（模拟 React

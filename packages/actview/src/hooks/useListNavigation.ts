@@ -29,6 +29,7 @@ import {
 } from '../components/FloatingTree';
 import type {Dimensions, ElementProps, FloatingRootContext} from '../types';
 import {enqueueFocus} from '../utils/enqueueFocus';
+import {gridNavigation} from './gridNavigation';
 import {warn} from '../utils/log';
 import {
   ARROW_DOWN,
@@ -241,6 +242,13 @@ export interface UseListNavigationProps {
    */
   cols?: number | undefined;
   /**
+   * base-ui 变体：注入式网格导航（grid-capable consumers 传入）。
+   * 替代上游 `cols` 的单元格映射，支持 DOM 行结构检测（`role="row"`）、
+   * 虚拟化间隙与部分行回退。传入后优先于 `cols` 生效。
+   * 位置参数签名与 `gridNavigation` 锁定（经 `typeof`）。
+   */
+  grid?: typeof gridNavigation | null | undefined;
+  /**
    * Whether to scroll the active item into view when navigating. The default
    * value uses nearest options.
    */
@@ -294,6 +302,7 @@ export function useListNavigation(
     orientation = 'vertical',
     parentOrientation,
     cols = 1,
+    grid = null,
     scrollItemIntoView = true,
     virtualItemRef,
     itemSizes,
@@ -488,12 +497,18 @@ export function useListNavigation(
                 scheduler(waitForListPopulated);
               }
             } else {
+              // base-ui 的 isListIndexDisabled 语义：空 disabledIndices 数组不
+              // 短路，属性（disabled/aria-disabled）仍被检查（mui/base-ui#2604）。
+              // 因此这里照常传入 disabledIndices——数组项与属性项都会被跳过。
+              // base-ui 对齐（mui/base-ui#2604）：initial sync 故意不传
+              // disabledIndices——空数组时也检查属性（disabled/aria-disabled），
+              // 使属性禁用的项在打开时被跳过。
               indexRef.value =
                 keyRef.value == null ||
                 isMainOrientationToEndKey(keyRef.value, orientation, rtl) ||
                 nested
-                  ? getMinListIndex(listRef, disabledIndicesRef.value)
-                  : getMaxListIndex(listRef, disabledIndicesRef.value);
+                  ? getMinListIndex(listRef)
+                  : getMaxListIndex(listRef);
               keyRef.value = null;
               onNavigate();
             }
@@ -637,7 +652,13 @@ export function useListNavigation(
   function syncCurrentTarget(currentTarget: HTMLElement | null) {
     if (!open.value) return;
     const index = listRef.value.indexOf(currentTarget);
-    if (index !== -1 && indexRef.value !== index) {
+    // React 版条件：`indexRef.current !== index || activeIndex !== index`——
+    // activeIndex 为 null 但 selectedIndex 匹配时（indexRef 已同步 selectedIndex）
+    // 也要触发聚焦与 onNavigate。
+    if (
+      index !== -1 &&
+      (indexRef.value !== index || toValue(activeIndex) !== index)
+    ) {
       indexRef.value = index;
       onNavigate();
     }
@@ -668,7 +689,14 @@ export function useListNavigation(
     // the user ArrowDowns, the first item won't be focused.
     if (
       !open.value &&
-      event.currentTarget === floatingFocusElementRef.value
+      event.currentTarget === floatingFocusElementRef.value &&
+      // React 版在 Escape 处理期间读取的是未提交 setState 的旧值（open 仍为
+      // true），因此 Escape 的 cross-close（关闭 nested 菜单并聚焦父级
+      // reference）会正常执行。actview 的 ref 赋值同步，useDismiss 的
+      // Escape 监听（目标阶段）已先行关闭浮层，这里若直接 return 会跳过
+      // cross-close，导致子菜单关闭后焦点停留在原 item 上。改为在
+      // Escape+nested 时继续执行，让 697 的 cross-close 聚焦父级 reference。
+      !(event.key === 'Escape' && nested)
     ) {
       return;
     }
@@ -691,6 +719,26 @@ export function useListNavigation(
           tree?.events.emit('virtualfocus', elements.domReference.value);
         } else {
           elements.domReference.value.focus();
+
+          // React 版合成事件跨 portal 按 React 树冒泡，父菜单能收到 close key
+          // 并继续导航；actview 是原生 DOM 冒泡，子浮层 portal 到 body 后事件
+          // 不会到达父菜单。当 close key 同时也是父菜单的导航键（未 stopEvent）
+          // 时，将事件重新派发到父级 reference 上，模拟合成事件冒泡让父菜单导航。
+          if (isMainOrientationKey(event.key, getParentOrientation())) {
+            // 原生事件对象已初始化（userEvent 派发过），不能重复 dispatch；
+            // 克隆关键字段生成新事件以模拟合成事件冒泡。
+            const cloned = new KeyboardEvent(event.type, {
+              key: event.key,
+              code: event.code,
+              ctrlKey: event.ctrlKey,
+              shiftKey: event.shiftKey,
+              altKey: event.altKey,
+              metaKey: event.metaKey,
+              bubbles: true,
+              cancelable: true,
+            });
+            elements.domReference.value.dispatchEvent(cloned);
+          }
         }
       }
 
@@ -715,8 +763,29 @@ export function useListNavigation(
       }
     }
 
-    // Grid navigation.
-    if (cols > 1) {
+    // Grid navigation（base-ui 变体注入式优先于上游 cols 单元格映射）。
+    if (grid) {
+      const index = grid(
+        event,
+        indexRef.value,
+        listRef,
+        orientation,
+        loop,
+        rtl,
+        disabledIndices,
+        minIndex,
+        maxIndex,
+      );
+
+      if (index != null) {
+        indexRef.value = index;
+        onNavigate();
+      }
+
+      if (orientation === 'both') {
+        return;
+      }
+    } else if (cols > 1) {
       const sizes =
         itemSizes ||
         Array.from({length: listRef.value.length}, () => ({

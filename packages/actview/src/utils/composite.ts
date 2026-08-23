@@ -15,7 +15,7 @@ interface KeyboardEventLike {
   stopPropagation(): void;
 }
 
-type DisabledIndices = Array<number> | ((index: number) => boolean);
+export type DisabledIndices = Array<number> | ((index: number) => boolean);
 
 export function isDifferentGridRow(
   index: number,
@@ -34,14 +34,14 @@ export function isIndexOutOfListBounds(
 
 export function getMinListIndex(
   listRef: ListRef,
-  disabledIndices: DisabledIndices | undefined,
+  disabledIndices?: DisabledIndices | undefined,
 ) {
   return findNonDisabledListIndex(listRef, {disabledIndices});
 }
 
 export function getMaxListIndex(
   listRef: ListRef,
-  disabledIndices: DisabledIndices | undefined,
+  disabledIndices?: DisabledIndices | undefined,
 ) {
   return findNonDisabledListIndex(listRef, {
     decrement: true,
@@ -358,6 +358,10 @@ export function isListIndexDisabled(
     return true;
   }
 
+  // base-ui 语义：只有未显式传入 disabledIndices 时才检查属性
+  // （disabled/aria-disabled）。initial sync 故意不传 disabledIndices
+  // （mui/base-ui#2604），使属性禁用的项在打开时也被跳过；导航时传入
+  // disabledIndices 数组，由数组控制（aria-disabled 项可聚焦）。
   return (
     !disabledIndices &&
     (element.hasAttribute('disabled') ||

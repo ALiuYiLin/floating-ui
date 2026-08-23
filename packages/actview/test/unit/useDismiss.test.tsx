@@ -684,6 +684,14 @@ describe('bubbles', () => {
       expect(screen.queryByTestId('outer')).toBeInTheDocument();
       expect(screen.queryByTestId('inner')).toBeInTheDocument();
 
+      // Escape 按层级关闭：即使 `bubbles: true`，一次 Escape 只关最内层
+      // （`bubbles` 只影响事件传播，不影响 Escape 的层级关闭）。
+      await userEvent.keyboard('{Escape}');
+      await flushMicrotasks();
+
+      expect(screen.queryByTestId('outer')).toBeInTheDocument();
+      expect(screen.queryByTestId('inner')).not.toBeInTheDocument();
+
       await userEvent.keyboard('{Escape}');
       await flushMicrotasks();
 
