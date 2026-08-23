@@ -670,8 +670,8 @@ describe('focusOnHover', () => {
   });
 });
 
-// 以下 grid 测试使用 visual 组件（Grid / ComplexGrid / ListboxFocus，已迁移
-// 到 actview）；changing/disabled list items 依赖 EmojiPicker（未迁移，跳过）。
+// 以下 grid 测试使用 visual 组件（Grid / ComplexGrid / ListboxFocus /
+// EmojiPicker，均已迁移到 actview 并恢复运行）。
 describe('grid navigation', () => {
   test('ArrowDown focuses first item', async () => {
     render(<Grid />);
