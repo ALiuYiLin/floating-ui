@@ -42,7 +42,7 @@
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:browser": "vitest run --browser",
-    "build": "rollup -c",
+    "build": "rollup -c && tsc -p tsconfig.lib.json && node scripts/copy-dts.mjs",
     "typecheck": "tsc -b"
   },
   "license": "MIT",
