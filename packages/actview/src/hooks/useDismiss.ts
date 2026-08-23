@@ -142,6 +142,14 @@ export interface UseDismissProps {
  * the user presses the `escape` key or outside of the floating element.
  * @see https://floating-ui.com/docs/useDismiss
  */
+// Escape 键按层级关闭（一次 Escape 只关最内层）需要"渲染期 open"语义：
+// React 版靠 setState 异步（外层处理时内层渲染值仍是 open）天然成立；actview
+// 的 open 是同步 ref（内层先关后外层立刻读到 false），外层 getNodeChildren
+// 默认只算 open 子级 =》 children 空 =》 误关。这里用事件级标记补偿：
+// 同一次 Escape 事件中已被关闭的节点视为"仍打开"（模拟 React 渲染期快照）。
+const escapeKeyClosedNodes = new Set<string>();
+let escapeKeyEventRef: unknown = null;
+
 export function useDismiss(
   context: FloatingRootContext,
   props: UseDismissProps = {},
@@ -189,10 +197,17 @@ export function useDismiss(
       return;
     }
 
+    // 事件级重置：同一 Escape 事件只重置一轮（多个浮层 handler 共享标记）
+    if (escapeKeyEventRef !== event) {
+      escapeKeyClosedNodes.clear();
+      escapeKeyEventRef = event;
+    }
+
     const nodeId = dataRef.value.floatingContext?.nodeId.value;
 
+    // 不过滤 open 子级：内层若已在本次 Escape 中被同步关闭，仍须参与阻塞判断
     const children = tree
-      ? getNodeChildren(tree.nodesRef.value, nodeId)
+      ? getNodeChildren(tree.nodesRef.value, nodeId, false)
       : [];
 
     if (!escapeKeyBubbles) {
@@ -203,8 +218,9 @@ export function useDismiss(
 
         children.forEach((child) => {
           if (
-            child.context?.open.value &&
-            !child.context.dataRef.value.__escapeKeyBubbles
+            (child.context?.open.value ||
+              escapeKeyClosedNodes.has(child.id as string)) &&
+            !child.context!.dataRef.value.__escapeKeyBubbles
           ) {
             shouldDismiss = false;
             return;
@@ -216,6 +232,10 @@ export function useDismiss(
         }
       }
     }
+
+    // 标记本节点在本次 Escape 中已关闭：外层判断时视为"仍打开"（模拟 React
+    // 渲染期快照），保证一次 Escape 只关最内层
+    escapeKeyClosedNodes.add(nodeId as string);
 
     // actview 无合成事件：event 即原生事件
     onOpenChange(false, event, 'escape-key');

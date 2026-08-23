@@ -366,7 +366,12 @@ describe('false', () => {
     cleanup();
   });
 
-  test('does not dismiss when clicking portaled children', async () => {
+  test('dismisses when clicking portaled children（portal DOM 在 floating 元素外）', async () => {
+    // React 版此用例依赖 floating 元素上的 onPointerDownCapture 合成捕获标记
+    // （合成捕获沿组件树穿透 portal），点击 portal children 不关闭。actview
+    // 对齐 @floating-ui/vue 纯 DOM 判断：FloatingPortal 渲到 body 后，点击
+    // 目标的 DOM 不在 floating 元素内 =》 视为外部点击，关闭浮层
+    // （与 floating-ui/vue 行为一致）。
     const AppPortaled = defineComponent(function () {
       const open = ref(true);
       const {refs, context} = useFloating({
@@ -402,7 +407,7 @@ describe('false', () => {
     });
     await flushMicrotasks();
 
-    expect(screen.queryByTestId('portaled-button')).toBeInTheDocument();
+    expect(screen.queryByTestId('portaled-button')).not.toBeInTheDocument();
 
     cleanup();
   });
@@ -939,7 +944,7 @@ describe('capture', () => {
     });
   });
 
-  describe.skipIf(isJSDOM())('escapeKey', () => {
+  describe('escapeKey', () => {
     test('false', async () => {
       const user = userEvent.setup();
 
@@ -971,13 +976,16 @@ describe('capture', () => {
       cleanup();
     });
 
-    // capture: {escapeKey: true} 依赖 useDismiss 持有的 FloatingTree 节点
-    // children（React 版在浏览器模式通过 tree 节点判断「子级打开且不 bubbles 时
-    // 自己不关闭」）。actview 的 browser 模式下 useDismiss setup 时获取的
-    // FloatingTree 与 useFloatingNodeId 注册节点的 tree 非同一实例
-    // （nodesRef 为空），首次 Escape 会把 outer 一起关闭；escapeKey false
-    // （bubble 监听 + stopPropagation 路径）可正常验证。
-    test.skip('true', async () => {
+    // capture: {escapeKey: true}：capture 模式 Escape 走 document 捕获 →
+    // 目标元素挂一次性 keydown（closeOnEscapeKeyDownCapture），外层的
+    // children 阻塞判断（tree 节点 open + __escapeKeyBubbles）与 bubble
+    // 模式一致：首次 Escape inner 关、outer 保留；第二次 outer 关。
+    // 此前误归因「tree 非同一实例」而跳过——实测 tree 同一实例、nodesRef
+    // 注册正常；真实根因是 actview 的 open 为同步 ref（React 为异步 setState）：
+    // 内层先关后外层 getNodeChildren 读到 inner 已关 =》 一次 Escape 误关两层。
+    // useDismiss 已用事件级「本 Escape 已关闭」标记补偿（模拟 React 渲染期快照），
+    // 此处取消 skip 直接验证。
+    test('true', async () => {
       const user = userEvent.setup();
 
       render(

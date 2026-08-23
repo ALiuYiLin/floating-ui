@@ -1,0 +1,19 @@
+{
+  // 编辑器（VSCode 等）对 test/*.tsx 的 JSX 类型检查配置：
+  // `jsxImportSource: @actview/jsx` 让 TS 从 @actview/jsx 解析 JSX 类型
+  // （默认 react-jsx 会找 react/jsx-runtime，测试模块报"找不到模块路径"）。
+  // 注意：未加入 tsconfig.json 的 references——tsc -b 只检查 lib（src）；
+  // 测试文件存在若干既有类型错误（Ref vs 原始值、implicit any 等），
+  // 待修复后可把本文件加进 references 获得完整类型检查。
+  "extends": "config/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "out-tsc",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@actview/jsx",
+    // FIXME: resize-observer-polyfill is conflicting with DOM typings
+    "skipLibCheck": true,
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
+  },
+  "include": ["test", "vite.config.mts"],
+  "references": [{"path": "./tsconfig.lib.json"}]
+}
