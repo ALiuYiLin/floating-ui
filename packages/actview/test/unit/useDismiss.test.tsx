@@ -1127,7 +1127,7 @@ test('nested floating elements with different portal roots', async () => {
           </ButtonWithFloating>
         </ButtonWithFloating>
         <div
-          ref={(el) => {
+          ref={(el: any) => {
             otherContainer.value = el;
           }}
         />
