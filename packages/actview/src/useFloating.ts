@@ -15,7 +15,9 @@ import {
   type Placement,
   type Platform,
   type Strategy,
+  type VirtualElement,
 } from '@floating-ui/dom';
+import {isElement} from '@floating-ui/utils/dom';
 import {useLatestRef} from './utils';
 
 import type {ReferenceType} from './types';
@@ -121,6 +123,17 @@ export function useFloating(
   const _floating = ref<HTMLElement | null>(null);
 
   const setReference = (node: ReferenceType | null) => {
+    // actview 语义：组件上的 ref 回调（如 `<Button ref={refs.setReference}>`）
+    // 在组件挂载后收到的是组件实例（非 DOM），React 版 ref 回调只会收到
+    // DOM 或 null。这里拒绝非元素/非虚拟元素的值，避免覆盖内部 DOM ref
+    // 已设置的正确 reference（否则 computePosition 会对组件实例调用
+    // getBoundingClientRect 报错）。
+    const isVirtual = (n: unknown): n is VirtualElement =>
+      typeof (n as VirtualElement)?.getBoundingClientRect === 'function';
+    if (node !== null && !isElement(node) && !isVirtual(node)) {
+      return;
+    }
+
     if (node !== referenceRef.value) {
       referenceRef.value = node;
       _reference.value = node;
