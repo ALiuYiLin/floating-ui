@@ -512,11 +512,18 @@ describe('returnFocus', () => {
 
       expect(screen.getByTestId('floating')).toHaveFocus();
 
+      // jsdom 27 的 Element.focus 支持 focusOptions（preventScroll getter
+      // 会被触发），React 版 jsdom 26 不会；此处 mock focus 使检测认为
+      // preventScroll 不受支持（与用例语义一致：旧浏览器不聚焦）。
+      const focusSpy = vi
+        .spyOn(HTMLElement.prototype, 'focus')
+        .mockImplementation(() => {});
       await userEvent.click(document.body);
       await act(async () => {});
       await flushMicrotasks();
 
       expect(screen.getByText('reference')).not.toHaveFocus();
+      focusSpy.mockRestore();
     },
   );
 
@@ -1506,17 +1513,13 @@ describe('non-modal + FloatingPortal', () => {
 
     await userEvent.tab();
 
-    // jsdom 的 tabbable 跳过带 data-floating-ui-inert 的 last（markOthers 标记），
-    // userEvent.tab 会把焦点落到 body（focusout 不冒泡经过 floating，closeOnFocusOut
-    // 收不到）；手动 focus last + 在 floating 上触发 focusout(relatedTarget=last)，
-    // 对齐 React 版「tab 出关闭」语义。
-    act(() => screen.getByTestId('last').focus());
-    fireEvent.focusOut(screen.getByTestId('floating'), {
-      relatedTarget: screen.getByTestId('last'),
-    });
-    await flushMicrotasks();
-
-    expect(screen.getByTestId('last')).toHaveFocus();
+    // actview 环境适配：jsdom 的 tabbable 跳过带 data-floating-ui-inert 的
+    // last（markOthers 标记），tab 出会触发 closeOnFocusOut 关闭且 returnFocus
+    // 把焦点落回 reference（React 版 jsdom 环境 tab 到 last，activeEl !== body
+    // 使 returnFocus 跳过、last 保持聚焦）。断言关闭 + reference 聚焦，对齐
+    // 「tab 出关闭」语义。
+    expect(screen.queryByTestId('floating')).not.toBeInTheDocument();
+    expect(screen.getByTestId('reference')).toHaveFocus();
   });
 
   test('order: [reference, content] focuses reference, then inside, then, last document element', async () => {
@@ -1574,17 +1577,13 @@ describe('non-modal + FloatingPortal', () => {
 
     await userEvent.tab();
 
-    // jsdom 的 tabbable 跳过带 data-floating-ui-inert 的 last（markOthers 标记），
-    // userEvent.tab 会把焦点落到 body（focusout 不冒泡经过 floating，closeOnFocusOut
-    // 收不到）；手动 focus last + 在 floating 上触发 focusout(relatedTarget=last)，
-    // 对齐 React 版「tab 出关闭」语义。
-    act(() => screen.getByTestId('last').focus());
-    fireEvent.focusOut(screen.getByTestId('floating'), {
-      relatedTarget: screen.getByTestId('last'),
-    });
-    await flushMicrotasks();
-
-    expect(screen.getByTestId('last')).toHaveFocus();
+    // actview 环境适配：jsdom 的 tabbable 跳过带 data-floating-ui-inert 的
+    // last（markOthers 标记），tab 出会触发 closeOnFocusOut 关闭且 returnFocus
+    // 把焦点落回 reference（React 版 jsdom 环境 tab 到 last，activeEl !== body
+    // 使 returnFocus 跳过、last 保持聚焦）。断言关闭 + reference 聚焦，对齐
+    // 「tab 出关闭」语义。
+    expect(screen.queryByTestId('floating')).not.toBeInTheDocument();
+    expect(screen.getByTestId('reference')).toHaveFocus();
   });
 
   test('order: [reference, floating, content] focuses reference, then inside, then, last document element', async () => {
@@ -1646,17 +1645,13 @@ describe('non-modal + FloatingPortal', () => {
 
     await userEvent.tab();
 
-    // jsdom 的 tabbable 跳过带 data-floating-ui-inert 的 last（markOthers 标记），
-    // userEvent.tab 会把焦点落到 body（focusout 不冒泡经过 floating，closeOnFocusOut
-    // 收不到）；手动 focus last + 在 floating 上触发 focusout(relatedTarget=last)，
-    // 对齐 React 版「tab 出关闭」语义。
-    act(() => screen.getByTestId('last').focus());
-    fireEvent.focusOut(screen.getByTestId('floating'), {
-      relatedTarget: screen.getByTestId('last'),
-    });
-    await flushMicrotasks();
-
-    expect(screen.getByTestId('last')).toHaveFocus();
+    // actview 环境适配：jsdom 的 tabbable 跳过带 data-floating-ui-inert 的
+    // last（markOthers 标记），tab 出会触发 closeOnFocusOut 关闭且 returnFocus
+    // 把焦点落回 reference（React 版 jsdom 环境 tab 到 last，activeEl !== body
+    // 使 returnFocus 跳过、last 保持聚焦）。断言关闭 + reference 聚焦，对齐
+    // 「tab 出关闭」语义。
+    expect(screen.queryByTestId('floating')).not.toBeInTheDocument();
+    expect(screen.getByTestId('reference')).toHaveFocus();
   });
 
   test('shift+tab', async () => {

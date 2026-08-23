@@ -37,6 +37,7 @@ import {useFloatingTree} from './FloatingTree';
 import {FocusGuard, HIDDEN_STYLES} from './FocusGuard';
 import {useLiteMergeRefs} from '../utils/useLiteMergeRefs';
 import {clearTimeoutIfSet} from '../utils/clearTimeoutIfSet';
+import {isElementVisible} from '../utils/composite';
 
 /**
  * actview 版（upstream 为 React 组件）。
@@ -81,13 +82,29 @@ function getPreviouslyFocusedElement() {
   return elementRef?.deref();
 }
 
-function getFirstTabbableElement(container: Element) {
+function getFirstTabbableElement(container: Element | null | undefined) {
+  if (!container) {
+    return null;
+  }
+
   const tabbableOptions = getTabbableOptions();
   if (isTabbable(container, tabbableOptions)) {
     return container;
   }
 
   return tabbable(container, tabbableOptions)[0] || container;
+}
+
+// 推断关闭交互类型（React 版 getEventType 的 actview 等价）。
+function getCloseType(event: Event): string {
+  if (event instanceof KeyboardEvent) return 'keyboard';
+  if ('pointerType' in event) {
+    return (event as PointerEvent).pointerType || 'keyboard';
+  }
+  if (event instanceof MouseEvent) {
+    return (event as MouseEvent).detail === 0 ? 'keyboard' : 'mouse';
+  }
+  return '';
 }
 
 function handleTabIndex(
@@ -115,6 +132,9 @@ function handleTabIndex(
   if (orderRef.value.includes('floating') || tabbableContent.length === 0) {
     if (tabIndex !== '0') {
       floatingFocusElement.setAttribute('tabindex', '0');
+      // 对齐 base-ui：管理写 tabindex=0 时同步 data-tabindex，供
+      // 「managed tabIndex downgraded」测试断言。
+      floatingFocusElement.setAttribute('data-tabindex', '0');
     }
   } else if (
     tabIndex !== '-1' ||
@@ -154,7 +174,7 @@ export interface FloatingFocusManagerProps {
    * state.
    * @default false
    */
-  disabled?: boolean | undefined;
+  disabled?: boolean | Ref<boolean> | undefined;
   /**
    * The order in which focus cycles.
    * @default ['content']
@@ -165,7 +185,7 @@ export interface FloatingFocusManagerProps {
    * specified by the `order`) or a ref.
    * @default 0
    */
-  initialFocus?: number | Ref<HTMLElement | null> | undefined;
+  initialFocus?: number | boolean | Ref<HTMLElement | null> | undefined;
   /**
    * Determines if the focus guards are rendered. If not, focus can escape into
    * the address bar/console/browser UI, like in native dialogs.
@@ -180,14 +200,18 @@ export interface FloatingFocusManagerProps {
    * It can be also set to a ref to explicitly control the element to return focus to.
    * @default true
    */
-  returnFocus?: boolean | Ref<HTMLElement | null> | undefined;
+  returnFocus?:
+    | boolean
+    | Ref<HTMLElement | null>
+    | ((closeType: string) => boolean | HTMLElement | null | void)
+    | undefined;
   /**
    * Determines if focus should be restored to the nearest tabbable element if
    * focus inside the floating element is lost (such as due to the removal of
    * the currently focused element from the DOM).
    * @default false
    */
-  restoreFocus?: boolean | undefined;
+  restoreFocus?: boolean | 'popup' | undefined;
   /**
    * Determines if focus is “modal”, meaning focus is fully trapped inside the
    * floating element and outside content cannot be accessed. This includes
@@ -277,7 +301,9 @@ export const FloatingFocusManager = defineComponent(function (
   const getNodeId = () => dataRef.value.floatingContext?.nodeId.value;
 
   const ignoreInitialFocus = computed(
-    () => typeof initialFocus.value === 'number' && initialFocus.value < 0,
+    () =>
+      initialFocus.value === false ||
+      (typeof initialFocus.value === 'number' && initialFocus.value < 0),
   );
   // If the reference is a combobox and is typeable (e.g. input/textarea),
   // there are different focus semantics. The guards should not be rendered, but
@@ -301,7 +327,12 @@ export const FloatingFocusManager = defineComponent(function (
     get value() {
       return getReturnFocus();
     },
-  } as Ref<boolean | HTMLElement | null>;
+  } as Ref<
+    | boolean
+    | HTMLElement
+    | null
+    | ((closeType: string) => boolean | HTMLElement | null | void)
+  >;
 
   const tree = useFloatingTree();
   const portalContext = usePortalContext();
@@ -312,6 +343,10 @@ export const FloatingFocusManager = defineComponent(function (
   const isPointerDownRef = ref(false);
   const tabbableIndexRef = ref(-1);
   const blurTimeoutRef = ref(-1);
+  // closeType 跨 watch 周期共享（React 版 useRef 语义）：keepMounted 场景下
+  // disabled/open 变化会触发多次 watch 重跑，若为周期局部变量，后续周期的
+  // cleanup 会读到 ''（丢失 Escape 的 'keyboard'），returnFocus 函数参数错。
+  const closeTypeRef = ref('');
 
   const isInsidePortal = computed(() => portalContext.value != null);
   const floatingFocusElement = computed(() =>
@@ -491,7 +526,7 @@ export const FloatingFocusManager = defineComponent(function (
           if (
             restoreFocus.value &&
             currentTarget !== domReference.value &&
-            !target?.isConnected &&
+            !isElementVisible(target as Element) &&
             activeElement(getDocument(floatingFocusElement.value)) ===
               getDocument(floatingFocusElement.value).body
           ) {
@@ -499,6 +534,10 @@ export const FloatingFocusManager = defineComponent(function (
             // floating tree.
             if (isHTMLElement(floatingFocusElement.value)) {
               floatingFocusElement.value.focus();
+              // 若显式要求恢复到 popup 容器，不再搜索前/后 tabbable。
+              if (restoreFocus.value === 'popup') {
+                return;
+              }
             }
 
             const prevTabbableIndex = tabbableIndexRef.value;
@@ -522,13 +561,22 @@ export const FloatingFocusManager = defineComponent(function (
 
           // Focus did not move inside the floating tree, and there are no
           // tabbable portal guards to handle closing.
+          // base-ui 变体：untrapped 且非 modal 时，焦点从 reference（combobox
+          // input）Tab 离开不应关闭——React 版中该场景 Tab 落在 floating 内
+          // （movedToUnrelatedNode=false 不关闭）；actview 版 DOM 顺序使 Tab
+          // 落在 floating 前/后的外部兄弟上，这里对齐 React 版语义不关闭。
           if (
-            (isUntrappedTypeableCombobox.value ? true : !modal.value) &&
+            (isUntrappedTypeableCombobox.value
+              ? !(currentTarget === domReference.value && !modal.value)
+              : !modal.value) &&
             relatedTarget &&
             movedToUnrelatedNode &&
             !isPointerDownRef.value &&
             // Fix React 18 Strict Mode returnFocus due to double rendering.
-            relatedTarget !== getPreviouslyFocusedElement()
+            // 未受陷的 typeable combobox 第二次 Tab 序列也要关闭（React 版
+            // 行为：相关元素为先前已聚焦元素时仍允许关闭）。
+            (isUntrappedTypeableCombobox.value ||
+              relatedTarget !== getPreviouslyFocusedElement())
           ) {
             preventReturnFocusRef.value = true;
             onOpenChange(false, event, 'focus-out');
@@ -660,11 +708,31 @@ export const FloatingFocusManager = defineComponent(function (
         const focusableElements = getTabbableElements(
           floatingFocusElement.value,
         );
-        const initialFocusValue = initialFocusRef.value;
-        const elToFocus =
-          (typeof initialFocusValue === 'number'
-            ? focusableElements[initialFocusValue]
-            : initialFocusValue.value) || floatingFocusElement.value;
+        const initialFocusValue = initialFocusRef.value as any;
+        // actview core 无 React 的 autoFocus 机制：显式尊重 `[autofocus]` 元素
+        // （React 版靠 autoFocus 已在 commit 聚焦 + focusAlreadyInside 检查）。
+        // 仅在未显式指定 initialFocus（默认行为，React 版等价 initialFocus=true）
+        // 时优先 autofocus 元素；显式指定（number/Ref/函数）时尊重显式目标。
+        // 注意：必须先于 number 分支解析（number 0 会短路 `elToFocus ||`）。
+        let elToFocus: FocusableElement | null | undefined =
+          props.initialFocus === undefined
+            ? (floating.value?.querySelector(
+                '[autofocus]',
+              ) as FocusableElement | null)
+            : null;
+        if (!elToFocus && typeof initialFocusValue === 'number') {
+          elToFocus = focusableElements[initialFocusValue];
+        } else if (typeof initialFocusValue === 'function') {
+          elToFocus = initialFocusValue('') || null;
+        } else if (
+          initialFocusValue &&
+          typeof initialFocusValue === 'object' &&
+          '__v_isRef' in initialFocusValue
+        ) {
+          elToFocus = initialFocusValue.value;
+        }
+        elToFocus =
+          elToFocus || focusableElements[0] || floatingFocusElement.value;
         // React 版用打开时的快照 `previouslyFocusedElement` 判断，但 actview 的
         // watch 触发顺序与 React 的 layout effect 相反（父先子后）：useListNavigation
         // 的 focusItem 可能已在本微任务前聚焦了列表项。这里用实时 activeElement 检查，
@@ -698,6 +766,14 @@ export const FloatingFocusManager = defineComponent(function (
 
       if (disabled.value || !floatingFocusElement.value) return;
 
+      // 对齐 React 版（打开 effect 里 `closeTypeRef.current = ''`）：
+      // 每次打开时重置 closeType。keepMounted 场景下打开的 emit 可能在
+      // 本 watch 注册 events.on 之前到达（disabled prop 同步滞后），若依赖
+      // onOpenChange 重置会残留上一次关闭的 closeType（如 'keyboard'）。
+      if (open.value) {
+        closeTypeRef.value = '';
+      }
+
       const doc = getDocument(floatingFocusElement.value);
       const previouslyFocusedElement = activeElement(doc);
 
@@ -715,6 +791,15 @@ export const FloatingFocusManager = defineComponent(function (
         event: Event;
         nested: boolean;
       }) {
+        closeTypeRef.value = getCloseType(event);
+
+        if (open) {
+          // 重新打开时重置 close modality（React 版在 cleanup 的
+          // queueMicrotask 无条件重置；actview 版 cleanup 可能多次执行，
+          // 改为打开时重置，避免重复 cleanup 用已重置的 false 抢回焦点）。
+          preventReturnFocusRef.value = false;
+        }
+
         if (
           ['hover', 'safe-polygon'].includes(reason) &&
           event.type === 'mouseleave'
@@ -754,23 +839,46 @@ export const FloatingFocusManager = defineComponent(function (
       fallbackEl.setAttribute('tabindex', '-1');
       fallbackEl.setAttribute('aria-hidden', 'true');
       Object.assign(fallbackEl.style, HIDDEN_STYLES);
-
-      if (isInsidePortal.value && domReference.value) {
+      // returnFocus 为函数时不插入 fallback（React 版行为：函数返回 falsy 时
+      // 既不聚焦也不插入兜底元素）。
+      if (
+        isInsidePortal.value &&
+        domReference.value &&
+        typeof returnFocusRef.value !== 'function'
+      ) {
         domReference.value.insertAdjacentElement('afterend', fallbackEl);
       }
 
+      // base-ui 变体：returnFocus 支持函数（closeType）→ 返回值解析；
+      // 函数返回 undefined/false 返回 null（不聚焦）。
       function getReturnElement() {
-        if (typeof returnFocusRef.value === 'boolean') {
+        const value = returnFocusRef.value;
+        let resolved: any =
+          typeof value === 'function' ? value(closeTypeRef.value) : value;
+
+        if (resolved === undefined || resolved === false) {
+          return null;
+        }
+
+        if (resolved === null) {
+          resolved = true;
+        }
+
+        const refEl =
+          resolved && typeof resolved === 'object' && '__v_isRef' in resolved
+            ? (resolved as unknown as Ref<HTMLElement | null>).value
+            : resolved;
+
+        if (typeof resolved === 'boolean') {
           const el = domReference.value || getPreviouslyFocusedElement();
           return el && el.isConnected ? el : fallbackEl;
         }
 
-        const raw = returnFocusRef.value;
-        const el =
-          raw && typeof raw === 'object' && '__v_isRef' in raw
-            ? (raw as unknown as Ref<HTMLElement | null>).value
-            : (raw as HTMLElement | null);
-        return el || fallbackEl;
+        return (
+          (refEl as HTMLElement | null) ||
+          (domReference.value || getPreviouslyFocusedElement()) ||
+          fallbackEl
+        );
       }
 
       cleanupReturnFocus = () => {
@@ -786,6 +894,8 @@ export const FloatingFocusManager = defineComponent(function (
             ));
 
         const returnElement = getReturnElement();
+        const hasExplicitReturnFocus =
+          typeof returnFocusRef.value !== 'boolean';
 
         queueMicrotask(() => {
           // This is `returnElement`, if it's tabbable, or its first tabbable
@@ -800,11 +910,18 @@ export const FloatingFocusManager = defineComponent(function (
             // focus since it likely entered a different element which should
             // be respected:
             // https://github.com/floating-ui/floating-ui/issues/2607
-            (tabbableReturnElement !== activeEl && activeEl !== doc.body
+            (!hasExplicitReturnFocus &&
+            tabbableReturnElement !== activeEl &&
+            activeEl !== doc.body
               ? isFocusInsideFloatingTree
               : true)
           ) {
-            tabbableReturnElement.focus({preventScroll: true});
+            const focusOptions: FocusOptions = {preventScroll: true};
+            // 键盘关闭时显式 focusVisible（React 版行为）。
+            if (closeTypeRef.value === 'keyboard') {
+              (focusOptions as Record<string, unknown>).focusVisible = true;
+            }
+            tabbableReturnElement.focus(focusOptions);
           }
 
           fallbackEl.remove();
@@ -828,6 +945,8 @@ export const FloatingFocusManager = defineComponent(function (
   );
 
   // React 版 `useModernLayoutEffect`：同步 context & modal 到 FloatingPortal
+  // 注意：open 在 FFM 挂载前已为 true，watch 无 immediate 时首次不触发，
+  // FloatingPortal 的 focusManagerState 保持 null（owner/guard 不渲染）。
   watch(
     [portalContext, open, domReference],
     () => {
@@ -847,6 +966,7 @@ export const FloatingFocusManager = defineComponent(function (
         currentPortal.setFocusManagerState(null);
       });
     },
+    {immediate: true},
   );
 
   // React 版 `useModernLayoutEffect`：handleTabIndex

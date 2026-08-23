@@ -3,7 +3,8 @@
   "compilerOptions": {
     "outDir": "out-tsc",
     "jsx": "react-jsx",
-    "jsxImportSource": "@actview/jsx"
+    "jsxImportSource": "@actview/jsx",
+    "skipLibCheck": true
   },
   "include": ["src"],
   "references": [

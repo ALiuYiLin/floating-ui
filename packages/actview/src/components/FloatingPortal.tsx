@@ -195,6 +195,10 @@ export interface FloatingPortalProps {
    * DOM tree.
    */
   preserveTabOrder?: boolean | undefined;
+  /**
+   * Sets the ARIA role of the portal's aria-owns owner element (base-ui 变体).
+   */
+  portalOwnerRole?: string | undefined;
 }
 
 /**
@@ -210,7 +214,7 @@ export const FloatingPortal = defineComponent(function (
 ) {
   // children 必须每次渲染读取（actview props 响应式，setup 解构是首次快照）；
   // FloatingPortal 的 children 常为条件渲染（如 {open && ...}）。
-  const {id, root, preserveTabOrder = true} = props;
+  const {id, root, preserveTabOrder = true, portalOwnerRole} = props;
 
   const portalNode = useFloatingPortalNode({id, root});
   const focusManagerState = ref<FocusManagerState>(null);
@@ -323,7 +327,11 @@ export const FloatingPortal = defineComponent(function (
         />
       )}
       {shouldRenderGuards.value && portalNode.value && (
-        <span aria-owns={portalNode.value.id} style={HIDDEN_OWNER_STYLES} />
+        <span
+          aria-owns={portalNode.value.id}
+          role={portalOwnerRole || undefined}
+          style={HIDDEN_OWNER_STYLES}
+        />
       )}
       {portalNode.value && (
         <Teleport to={portalNode.value}>{props.children}</Teleport>
