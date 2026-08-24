@@ -1,5 +1,5 @@
 import {act, cleanup, fireEvent, flushMicrotasks, render, screen} from './utils';
-import {defineComponent, onMounted, ref} from '@actview/core';
+import {defineComponent, onMounted, rawRef, ref} from '@actview/core';
 
 import {FloatingPortal, useFloating} from '../../src';
 
@@ -106,7 +106,7 @@ test('allows roots to be initially null', async () => {
     return () => (
       <>
         {renderRoot.value && <div ref={root} data-testid="root" />}
-        <App root={root} />
+        <App root={rawRef(root)} />
       </>
     );
   });

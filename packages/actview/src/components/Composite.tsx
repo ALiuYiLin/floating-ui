@@ -1,4 +1,4 @@
-import {computed, createContext, defineComponent, ref, toValue, type Ref} from '@actview/core';
+import {computed, createContext, defineComponent, rawRef, ref, toValue, type Ref} from '@actview/core';
 import {
   createGridCellMap,
   findNonDisabledListIndex,
@@ -357,7 +357,7 @@ export const Composite = defineComponent(function (props: CompositeProps) {
 
     return (
       <CompositeContext.Provider value={contextValue.value}>
-        <FloatingList elementsRef={elementsRef}>
+        <FloatingList elementsRef={rawRef(elementsRef)}>
           {renderJsx(render, computedProps)}
         </FloatingList>
       </CompositeContext.Provider>

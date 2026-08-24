@@ -10,7 +10,7 @@ import {
 } from './utils';
 import userEvent from '@testing-library/user-event';
 import {createElement, isValidElement} from '@actview/jsx';
-import {defineComponent, ref, type Ref} from '@actview/core';
+import {defineComponent, rawRef, ref, type Ref} from '@actview/core';
 import {test} from 'vitest';
 
 import {
@@ -62,7 +62,7 @@ const App = defineComponent(function (props: AppProps) {
         <FloatingFocusManager
           {...props}
           initialFocus={
-            props.initialFocus === 'two' ? twoRef : props.initialFocus
+            props.initialFocus === 'two' ? rawRef(twoRef) : props.initialFocus
           }
           context={context}
         >
@@ -235,7 +235,7 @@ describe('returnFocus', () => {
             <input />
             <input data-testid="focus-target" ref={focusTargetRef} />
             <input />
-            <App returnFocus={focusTargetRef} />
+            <App returnFocus={rawRef(focusTargetRef)} />
           </div>
       );
     });
@@ -981,7 +981,7 @@ describe('modal', () => {
           sideChildren={
             <NestedDialog
               modal={true}
-              open={sideDialogOpen}
+              open={rawRef(sideDialogOpen)}
               render={({close}) => (
                 <button
                   onClick={close}

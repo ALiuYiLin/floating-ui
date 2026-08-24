@@ -1,4 +1,4 @@
-import {computed, createContext, defineComponent, onUnmounted, ref, watch, type Ref} from '@actview/core';
+import {computed, createContext, defineComponent, isRef, onUnmounted, ref, watch, type Ref} from '@actview/core';
 
 /**
  * actview 版（upstream 为 React 组件/hooks）。
@@ -70,6 +70,19 @@ export const FloatingList = defineComponent(function (
 ) {
   const nodes = ref(new Set<Node>());
 
+  // JSX props 自动解包（unwrapProps）会把调用方传入的 ref 解成数组：
+  // <FloatingList elementsRef={ref([])}> 的 props.elementsRef 是数组本体。
+  // 这里统一兜底回 Ref 语义（rawRef 包装 / 未解包的 Ref 原样保留），
+  // 保证 context 消费方（useListItem）始终通过 .value 读写数组。
+  const elementsRef: Ref<Array<HTMLElement | null>> = isRef(props.elementsRef)
+    ? props.elementsRef
+    : ref(props.elementsRef as Array<HTMLElement | null>);
+  const labelsRef: Ref<Array<string | null>> | undefined = props.labelsRef
+    ? isRef(props.labelsRef)
+      ? props.labelsRef
+      : ref(props.labelsRef as Array<string | null>)
+    : undefined;
+
   const register = (node: Node) => {
     nodes.value = new Set(nodes.value).add(node);
   };
@@ -97,8 +110,8 @@ export const FloatingList = defineComponent(function (
     register,
     unregister,
     map: map.value,
-    elementsRef: props.elementsRef,
-    labelsRef: props.labelsRef,
+    elementsRef,
+    labelsRef,
   }));
 
   return () => (

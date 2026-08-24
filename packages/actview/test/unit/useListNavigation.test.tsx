@@ -8,7 +8,7 @@ import {
   waitFor,
 } from './utils';
 import userEvent from '@testing-library/user-event';
-import {defineComponent, onMounted, ref, watch, type Ref} from '@actview/core';
+import {defineComponent, onMounted, rawRef, ref, watch, type Ref} from '@actview/core';
 import {vi, test, describe} from 'vitest';
 
 import {
@@ -1362,7 +1362,7 @@ test('scheduled list population', async () => {
             {['one', 'two', 'three'].map((option, index) => (
               <Option
                 key={option}
-                listRef={listRef}
+                listRef={rawRef(listRef)}
                 getItemProps={getItemProps}
                 index={index}
                 active={activeIndex.value === index}
