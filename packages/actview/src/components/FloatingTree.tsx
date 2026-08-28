@@ -28,9 +28,10 @@ const FloatingTreeContext = createContext<FloatingTreeType | null>(null);
 /**
  * Returns the parent node id for nested floating elements, if available.
  * Returns `null` for top-level floating elements.
+ * (store-as-is：use() 原样返回 payload——直读字段，不再 `.value`。)
  */
 export const useFloatingParentNodeId = (): string | null =>
-  FloatingNodeContext.use().value?.id || null;
+  FloatingNodeContext.use()?.id || null;
 
 /**
  * Returns the nearest floating tree context, if available.
@@ -38,7 +39,7 @@ export const useFloatingParentNodeId = (): string | null =>
 export const useFloatingTree = <
   RT extends ReferenceType = ReferenceType,
 >(): FloatingTreeType<RT> | null =>
-  FloatingTreeContext.use().value as FloatingTreeType<RT> | null;
+  FloatingTreeContext.use() as FloatingTreeType<RT> | null;
 
 /**
  * Registers a node into the `FloatingTree`, returning its id.
@@ -51,7 +52,7 @@ export function useFloatingNodeId(
   const tree = useFloatingTree();
   const nodeContext = FloatingNodeContext.use();
   const parentId = computed(
-    () => customParentId || nodeContext.value?.id || null,
+    () => customParentId || nodeContext?.id || null,
   );
 
   let added = false;
@@ -92,7 +93,7 @@ export const FloatingNode = defineComponent(function (
   props: FloatingNodeProps,
 ) {
   const nodeContext = FloatingNodeContext.use();
-  const parentId = computed(() => nodeContext.value?.id || null);
+  const parentId = computed(() => nodeContext?.id || null);
 
   return () => (
     <FloatingNodeContext.Provider
