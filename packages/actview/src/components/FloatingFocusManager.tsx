@@ -893,6 +893,11 @@ export const FloatingFocusManager = defineComponent(function (
                 contains(node.context?.elements.floating.value, activeEl),
             ));
 
+        // 快照 closeType：queueMicrotask 内再读会被 reopen 的 open=true watch
+        // 重置（core 1.4.0 调度器按组件树序执行 watch，reopen 先于本微任务）——
+        // 键盘关闭的 focusVisible 因此丢失。React 版在 onOpenChange 同步读。
+        const closeTypeSnapshot = closeTypeRef.value;
+
         const returnElement = getReturnElement();
         const hasExplicitReturnFocus =
           typeof returnFocusRef.value !== 'boolean';
@@ -918,7 +923,7 @@ export const FloatingFocusManager = defineComponent(function (
           ) {
             const focusOptions: FocusOptions = {preventScroll: true};
             // 键盘关闭时显式 focusVisible（React 版行为）。
-            if (closeTypeRef.value === 'keyboard') {
+            if (closeTypeSnapshot === 'keyboard') {
               (focusOptions as Record<string, unknown>).focusVisible = true;
             }
             tabbableReturnElement.focus(focusOptions);
