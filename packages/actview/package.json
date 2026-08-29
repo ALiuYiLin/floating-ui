@@ -63,7 +63,7 @@
     "actview"
   ],
   "dependencies": {
-    "@actview/core": "1.3.0",
+    "@actview/core": "1.4.1",
     "@actview/jsx": "1.1.0",
     "@floating-ui/dom": "workspace:^",
     "@floating-ui/utils": "workspace:^",
