@@ -214,8 +214,8 @@ importers:
   packages/actview:
     dependencies:
       '@actview/core':
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.3.0
+        version: 1.3.0
       '@actview/jsx':
         specifier: 1.1.0
         version: 1.1.0
@@ -230,11 +230,11 @@ importers:
         version: 6.2.0
     devDependencies:
       '@actview/plugin-babel':
-        specifier: 1.0.7
-        version: 1.0.7(@babel/core@7.26.10)(@babel/generator@7.26.10)
+        specifier: 2.0.0
+        version: 2.0.0(@babel/core@7.26.10)(@babel/generator@7.26.10)
       '@actview/testing':
         specifier: 0.1.1
-        version: 0.1.1(@actview/core@1.1.0)
+        version: 0.1.1(@actview/core@1.3.0)
       '@testing-library/dom':
         specifier: ^10.4.0
         version: 10.4.0
@@ -554,14 +554,14 @@ importers:
 
 packages:
 
-  '@actview/core@1.1.0':
-    resolution: {integrity: sha512-gUum5mcmgKM7Jwv0ztE8+CGGXpOGkcL3z5axZjslqhp6BW3HS78xsdSz7VKVqcGvOwoMtqosCNw0pvegRNpGlQ==}
+  '@actview/core@1.3.0':
+    resolution: {integrity: sha512-bgCqpcVe5AL8WGgdZg45xsCwR9K8KMZ0W9R5bsuzLopK7GLh+hzzKMixqi7dhjOoU+c7dkuA4GiAPxfQPflQkQ==}
 
   '@actview/jsx@1.1.0':
     resolution: {integrity: sha512-qhieLhp5xcL+A/wE5mnDS0vnl4ilm6C8KohzZE1mNZEePy2iI1TV093op8vDbQeY97wQPZJRC/78RX2bTDd37w==}
 
-  '@actview/plugin-babel@1.0.7':
-    resolution: {integrity: sha512-0B8UiS8jSVz7VDpvMNUVD1NEu8pzGJiDBEouAXyETRKczYWJdNYU/doDpDk+pMHPJMCrnhekNgWJ4bQ6Ly011w==}
+  '@actview/plugin-babel@2.0.0':
+    resolution: {integrity: sha512-tdIEJc7MH2vGs0M7RgxBJGOmKp5rdH0XESaOY/Z6Mp3gPt+llSCmXPzFZf/Z5WpXNDcqveYBvk2OBHvCsScSlg==}
     peerDependencies:
       '@babel/core': ^8.0.0
       '@babel/generator': ^8.0.0
@@ -9368,18 +9368,18 @@ packages:
 
 snapshots:
 
-  '@actview/core@1.1.0': {}
+  '@actview/core@1.3.0': {}
 
   '@actview/jsx@1.1.0': {}
 
-  '@actview/plugin-babel@1.0.7(@babel/core@7.26.10)(@babel/generator@7.26.10)':
+  '@actview/plugin-babel@2.0.0(@babel/core@7.26.10)(@babel/generator@7.26.10)':
     dependencies:
       '@babel/core': 7.26.10
       '@babel/generator': 7.26.10
 
-  '@actview/testing@0.1.1(@actview/core@1.1.0)':
+  '@actview/testing@0.1.1(@actview/core@1.3.0)':
     dependencies:
-      '@actview/core': 1.1.0
+      '@actview/core': 1.3.0
 
   '@adobe/css-tools@4.4.2': {}
 

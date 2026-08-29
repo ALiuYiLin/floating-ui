@@ -106,16 +106,20 @@ export const FloatingList = defineComponent(function (
     return newMap;
   });
 
-  const contextValue = computed<FloatingListContextValue>(() => ({
+  // store-as-is 载体：身份稳定的 getter 对象（provide 只在 Provider setup 执行
+  // 一次，computed 重建的新对象会冻结快照——map 变化时 use() 仍拿到首帧对象）。
+  const contextValue: FloatingListContextValue = {
     register,
     unregister,
-    map: map.value,
+    get map() {
+      return map.value;
+    },
     elementsRef,
     labelsRef,
-  }));
+  };
 
   return () => (
-    <FloatingListContext.Provider value={contextValue.value}>
+    <FloatingListContext.Provider value={contextValue}>
       {props.children}
     </FloatingListContext.Provider>
   );
@@ -149,14 +153,14 @@ export function useListItem(props: UseListItemProps = {}): {
     // （register 幂等，Set 去重）并立即用重算后的 map 同步 index，保证
     // 挂载后首个事件处理器读到正确的 index。
     if (node) {
-      listContext.value.register(node);
-      const index = listContext.value.map.get(node);
+      listContext.register(node);
+      const index = listContext.map.get(node);
       if (index != null) {
         indexRef.value = index;
-        listContext.value.elementsRef.value[index] = node;
-        if (listContext.value.labelsRef) {
+        listContext.elementsRef.value[index] = node;
+        if (listContext.labelsRef) {
           const isLabelDefined = label !== undefined;
-          listContext.value.labelsRef.value[index] = isLabelDefined
+          listContext.labelsRef.value[index] = isLabelDefined
             ? label
             : node?.textContent ?? null;
         }
@@ -173,14 +177,14 @@ export function useListItem(props: UseListItemProps = {}): {
     () => {
       const node = componentRef.value;
       if (node) {
-        listContext.value.register(node);
+        listContext.register(node);
         registeredNode = node;
       }
     },
   );
   onUnmounted(() => {
     if (registeredNode) {
-      listContext.value.unregister(registeredNode);
+      listContext.unregister(registeredNode);
     }
   });
 
@@ -189,16 +193,16 @@ export function useListItem(props: UseListItemProps = {}): {
   // 写入 elementsRef；actview 的 ref 回调是固定函数不会重建，这里在 index 就绪后
   // 主动同步 elementsRef / labelsRef。
   watch(
-    () => listContext.value.map,
+    () => listContext.map,
     () => {
       const node = componentRef.value;
-      const index = node ? listContext.value.map.get(node) : null;
+      const index = node ? listContext.map.get(node) : null;
       if (index != null) {
         indexRef.value = index;
-        listContext.value.elementsRef.value[index] = node as HTMLElement;
-        if (listContext.value.labelsRef) {
+        listContext.elementsRef.value[index] = node as HTMLElement;
+        if (listContext.labelsRef) {
           const isLabelDefined = label !== undefined;
-          listContext.value.labelsRef.value[index] = isLabelDefined
+          listContext.labelsRef.value[index] = isLabelDefined
             ? label
             : node?.textContent ?? null;
         }

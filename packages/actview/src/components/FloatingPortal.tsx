@@ -122,7 +122,7 @@ export function useFloatingPortalNode(
       id,
       uniqueId.value,
       toValue(root),
-      portalContext.value?.portalNode,
+      portalContext?.portalNode,
     ],
     () => {
       // Wait for the uniqueId to be generated before creating the portal node
@@ -147,7 +147,7 @@ export function useFloatingPortalNode(
       const rootValue = toValue(root);
       if (rootValue === null) return;
 
-      let container = rootValue || portalContext.value?.portalNode;
+      let container = rootValue || portalContext?.portalNode;
       container = container || document.body;
 
       let idWrapper: HTMLDivElement | null = null;
@@ -297,18 +297,20 @@ export const FloatingPortal = defineComponent(function (
     cleanupFocusListeners?.();
   });
 
-  const contextValue = computed<PortalContextValue>(() => ({
+  const contextValue: PortalContextValue = {
     preserveTabOrder,
     beforeOutsideRef,
     afterOutsideRef,
     beforeInsideRef,
     afterInsideRef,
-    portalNode: portalNode.value,
+    get portalNode() {
+      return portalNode.value;
+    },
     setFocusManagerState,
-  }));
+  };
 
   return () => (
-    <PortalContext.Provider value={contextValue.value}>
+    <PortalContext.Provider value={contextValue}>
       {shouldRenderGuards.value && portalNode.value && (
         <FocusGuard
           data-type="outside"

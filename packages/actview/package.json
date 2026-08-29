@@ -63,7 +63,7 @@
     "actview"
   ],
   "dependencies": {
-    "@actview/core": "1.1.0",
+    "@actview/core": "1.3.0",
     "@actview/jsx": "1.1.0",
     "@floating-ui/dom": "workspace:^",
     "@floating-ui/utils": "workspace:^",
@@ -78,6 +78,6 @@
     "config": "workspace:*",
     "resize-observer-polyfill": "^1.5.1",
     "vitest": "^4.1.9",
-    "@actview/plugin-babel": "1.0.7"
+    "@actview/plugin-babel": "2.0.0"
   }
 }

@@ -348,7 +348,7 @@ export const FloatingFocusManager = defineComponent(function (
   // cleanup 会读到 ''（丢失 Escape 的 'keyboard'），returnFocus 函数参数错。
   const closeTypeRef = ref('');
 
-  const isInsidePortal = computed(() => portalContext.value != null);
+  const isInsidePortal = computed(() => portalContext != null);
   const floatingFocusElement = computed(() =>
     getFloatingFocusElement(floating.value),
   );
@@ -494,7 +494,7 @@ export const FloatingFocusManager = defineComponent(function (
             contains(domReference.value, relatedTarget) ||
             contains(floating.value, relatedTarget) ||
             contains(relatedTarget, floating.value) ||
-            contains(portalContext.value?.portalNode ?? null, relatedTarget) ||
+            contains(portalContext?.portalNode ?? null, relatedTarget) ||
             relatedTarget?.hasAttribute(createAttribute('focus-guard')) ||
             (tree &&
               (getNodeChildren(tree.nodesRef.value, nodeId).find(
@@ -584,7 +584,7 @@ export const FloatingFocusManager = defineComponent(function (
         });
       }
 
-      const shouldHandleBlurCapture = Boolean(!tree && portalContext.value);
+      const shouldHandleBlurCapture = Boolean(!tree && portalContext);
 
       function markInsideReactTree() {
         clearTimeoutIfSet(blurTimeoutRef);
@@ -636,11 +636,11 @@ export const FloatingFocusManager = defineComponent(function (
 
   const mergedBeforeGuardRef = useLiteMergeRefs([
     beforeGuardRef,
-    () => portalContext.value?.beforeInsideRef,
+    () => portalContext?.beforeInsideRef,
   ]);
   const mergedAfterGuardRef = useLiteMergeRefs([
     afterGuardRef,
-    () => portalContext.value?.afterInsideRef,
+    () => portalContext?.afterInsideRef,
   ]);
 
   // React 版 effect：markOthers（inert / aria-hidden）
@@ -656,7 +656,7 @@ export const FloatingFocusManager = defineComponent(function (
 
       // Don't hide portals nested within the parent portal.
       const portalNodes = Array.from(
-        portalContext.value?.portalNode?.querySelectorAll(
+        portalContext?.portalNode?.querySelectorAll(
           `[${createAttribute('portal')}]`,
         ) || [],
       );
@@ -677,8 +677,8 @@ export const FloatingFocusManager = defineComponent(function (
         endDismissButtonRef.value,
         beforeGuardRef.value,
         afterGuardRef.value,
-        portalContext.value?.beforeOutsideRef.value,
-        portalContext.value?.afterOutsideRef.value,
+        portalContext?.beforeOutsideRef.value,
+        portalContext?.afterOutsideRef.value,
         orderRef.value.includes('reference') ||
         isUntrappedTypeableCombobox.value
           ? domReference.value
@@ -951,7 +951,7 @@ export const FloatingFocusManager = defineComponent(function (
     [portalContext, open, domReference],
     () => {
       if (disabled.value) return;
-      const currentPortal = portalContext.value;
+      const currentPortal = portalContext;
       if (!currentPortal) return;
 
       currentPortal.setFocusManagerState({
@@ -1029,20 +1029,20 @@ export const FloatingFocusManager = defineComponent(function (
                 order.value[0] === 'reference' ? els[0] : els[els.length - 1],
               );
             } else if (
-              portalContext.value?.preserveTabOrder &&
-              portalContext.value.portalNode
+              portalContext?.preserveTabOrder &&
+              portalContext.portalNode
             ) {
               preventReturnFocusRef.value = false;
               if (
                 isOutsideEvent(
                   event,
-                  portalContext.value.portalNode ?? undefined,
+                  portalContext.portalNode ?? undefined,
                 )
               ) {
                 const nextTabbable = getNextTabbable(domReference.value);
                 nextTabbable?.focus();
               } else {
-                portalContext.value.beforeOutsideRef.value?.focus();
+                portalContext.beforeOutsideRef.value?.focus();
               }
             }
           }}
@@ -1063,8 +1063,8 @@ export const FloatingFocusManager = defineComponent(function (
             if (modal.value) {
               enqueueFocus(getTabbableElements()[0]);
             } else if (
-              portalContext.value?.preserveTabOrder &&
-              portalContext.value.portalNode
+              portalContext?.preserveTabOrder &&
+              portalContext.portalNode
             ) {
               if (closeOnFocusOut.value) {
                 preventReturnFocusRef.value = true;
@@ -1073,13 +1073,13 @@ export const FloatingFocusManager = defineComponent(function (
               if (
                 isOutsideEvent(
                   event,
-                  portalContext.value.portalNode ?? undefined,
+                  portalContext.portalNode ?? undefined,
                 )
               ) {
                 const prevTabbable = getPreviousTabbable(domReference.value);
                 prevTabbable?.focus();
               } else {
-                portalContext.value.afterOutsideRef.value?.focus();
+                portalContext.afterOutsideRef.value?.focus();
               }
             }
           }}
