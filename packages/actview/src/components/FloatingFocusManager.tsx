@@ -467,7 +467,7 @@ export const FloatingFocusManager = defineComponent(function (
   // 打开（disabled=false）后需重新注册 focusout 监听。
   let cleanupFocusOut: (() => void) | undefined;
   watch(
-    [domReference, floating, portalContext, disabled],
+    () => [domReference.value, floating.value, portalContext?.portalNode, disabled.value] as const,
     () => {
       cleanupFocusOut?.();
       cleanupFocusOut = undefined;
@@ -646,7 +646,7 @@ export const FloatingFocusManager = defineComponent(function (
   // React 版 effect：markOthers（inert / aria-hidden）
   let cleanupMarkOthers: (() => void) | undefined;
   watch(
-    [domReference, floating, portalContext],
+    () => [domReference.value, floating.value, portalContext?.portalNode] as const,
     () => {
       cleanupMarkOthers?.();
       cleanupMarkOthers = undefined;
@@ -948,7 +948,7 @@ export const FloatingFocusManager = defineComponent(function (
   // 注意：open 在 FFM 挂载前已为 true，watch 无 immediate 时首次不触发，
   // FloatingPortal 的 focusManagerState 保持 null（owner/guard 不渲染）。
   watch(
-    [portalContext, open, domReference],
+    () => [portalContext?.portalNode, open.value, domReference.value] as const,
     () => {
       if (disabled.value) return;
       const currentPortal = portalContext;
