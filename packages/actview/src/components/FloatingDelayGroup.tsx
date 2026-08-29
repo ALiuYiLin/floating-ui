@@ -46,8 +46,9 @@ const FloatingDelayGroupContext = createContext<GroupContext>({
 /**
  * @deprecated
  * Use the return value of `useDelayGroup()` instead.
+ * (store-as-is：use() 原样返回 payload——直读字段，不再 `.value`。)
  */
-export const useDelayGroupContext = (): Ref<GroupContext> =>
+export const useDelayGroupContext = (): GroupContext =>
   FloatingDelayGroupContext.use();
 
 export interface FloatingDelayGroupProps {
@@ -112,14 +113,30 @@ export const FloatingDelayGroup = defineComponent(function (
     },
   );
 
-  const contextValue = computed<GroupContext>(() => ({
-    ...state.value,
+  // store-as-is 载体：身份稳定的 getter 对象（provide 只在 Provider setup 执行
+  // 一次，computed 重建的新对象会冻结快照——state 变化时 use() 仍拿到首帧对象）。
+  const contextValue: GroupContext = {
+    get delay() {
+      return state.value.delay;
+    },
+    get initialDelay() {
+      return state.value.initialDelay;
+    },
+    get currentId() {
+      return state.value.currentId;
+    },
+    get timeoutMs() {
+      return state.value.timeoutMs;
+    },
+    get isInstantPhase() {
+      return state.value.isInstantPhase;
+    },
     setState,
     setCurrentId,
-  }));
+  };
 
   return () => (
-    <FloatingDelayGroupContext.Provider value={contextValue.value}>
+    <FloatingDelayGroupContext.Provider value={contextValue}>
       {children}
     </FloatingDelayGroupContext.Provider>
   );
@@ -142,7 +159,7 @@ interface UseGroupOptions {
 export function useDelayGroup(
   context: FloatingRootContext,
   options: UseGroupOptions = {},
-): Ref<GroupContext> {
+): GroupContext {
   const {open, onOpenChange, floatingId} = context;
   const {id: optionId, enabled = true} = options;
   const id = computed(() => optionId ?? floatingId.value);
@@ -154,11 +171,11 @@ export function useDelayGroup(
     () => [
       enabled,
       id.value,
-      groupContext.value.currentId,
-      groupContext.value.initialDelay,
+      groupContext.currentId,
+      groupContext.initialDelay,
     ],
     () => {
-      const {currentId, initialDelay, setState} = groupContext.value;
+      const {currentId, initialDelay, setState} = groupContext;
       if (!enabled) return;
       if (!currentId) return;
 
@@ -181,20 +198,20 @@ export function useDelayGroup(
     () => [
       enabled,
       open.value,
-      groupContext.value.currentId,
-      groupContext.value.initialDelay,
-      groupContext.value.timeoutMs,
+      groupContext.currentId,
+      groupContext.initialDelay,
+      groupContext.timeoutMs,
     ],
     () => {
       function unset() {
         onOpenChange(false);
-        groupContext.value.setState({
-          delay: groupContext.value.initialDelay,
+        groupContext.setState({
+          delay: groupContext.initialDelay,
           currentId: null,
         });
       }
 
-      const {currentId, timeoutMs, setState, initialDelay} = groupContext.value;
+      const {currentId, timeoutMs, setState, initialDelay} = groupContext;
       if (!enabled) return;
       if (!currentId) return;
 
@@ -217,8 +234,8 @@ export function useDelayGroup(
     () => [enabled, open.value, id.value],
     () => {
       if (!enabled) return;
-      if (groupContext.value.setCurrentId === NOOP || !open.value) return;
-      groupContext.value.setCurrentId(id.value);
+      if (groupContext.setCurrentId === NOOP || !open.value) return;
+      groupContext.setCurrentId(id.value);
     },
   );
 

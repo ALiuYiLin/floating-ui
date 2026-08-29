@@ -166,10 +166,15 @@ export const Composite = defineComponent(function (props: CompositeProps) {
 
   const elementsRef = ref<Array<HTMLDivElement | null>>([]);
 
-  const contextValue = computed<CompositeContextValue>(() => ({
-    activeIndex: activeIndex.value,
+  // store-as-is 载体：身份稳定的 getter 对象（provide 只在 Provider setup 执行
+  // 一次，computed 重建的新对象会冻结快照——activeIndex 变化时 use() 仍拿到
+  // 首帧对象）。
+  const contextValue: CompositeContextValue = {
+    get activeIndex() {
+      return activeIndex.value;
+    },
     onNavigate,
-  }));
+  };
 
   return () => {
     const {
@@ -356,7 +361,7 @@ export const Composite = defineComponent(function (props: CompositeProps) {
     };
 
     return (
-      <CompositeContext.Provider value={contextValue.value}>
+      <CompositeContext.Provider value={contextValue}>
         <FloatingList elementsRef={rawRef(elementsRef)}>
           {renderJsx(render, computedProps)}
         </FloatingList>
@@ -393,7 +398,7 @@ export const CompositeItem = defineComponent(function (
   const {ref: itemRef, index} = useListItem();
   const mergedRef = useMergeRefs([itemRef, props.ref, renderElementRef()]);
   const isActive = computed(
-    () => compositeContext.value.activeIndex === index.value,
+    () => compositeContext.activeIndex === index.value,
   );
 
   function renderElementRef() {
@@ -417,7 +422,7 @@ export const CompositeItem = defineComponent(function (
         (renderElementProps.onFocus as
           | ((e: FocusEvent) => void)
           | undefined)?.(e);
-        compositeContext.value.onNavigate(index.value);
+        compositeContext.onNavigate(index.value);
       },
     };
 

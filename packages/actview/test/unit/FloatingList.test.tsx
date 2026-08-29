@@ -69,9 +69,9 @@ const Option = defineComponent(function (props: {
   children?: any;
   label?: string;
 }) {
-  // actview 的 createContext().use() 返回 Ref<T>，解 .value 取值；
+  // store-as-is：createContext().use() 原样返回 payload——直读字段；
   // activeIndex 本身是 Ref（来自 Select），渲染闭包内读 .value 保持响应式。
-  const {getItemProps, activeIndex} = SelectContext.use().value;
+  const {getItemProps, activeIndex} = SelectContext.use();
   const {ref, index} = useListItem({label: props.label});
 
   return () => {

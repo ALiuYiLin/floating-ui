@@ -234,18 +234,18 @@ const Option = defineComponent(function (props: {children?: any; value: string})
 
   // React 版 useLayoutEffect：受控值变化时同步 selectedIndex。
   watch(
-    [() => props.value, () => ctx.value.selectedValue.value, index],
+    [() => props.value, () => ctx.selectedValue.value, index],
     () => {
-      if (index.value !== ctx.value.selectedIndex.value &&
-          props.value === ctx.value.selectedValue.value) {
-        ctx.value.setSelectedIndex(index.value);
+      if (index.value !== ctx.selectedIndex.value &&
+          props.value === ctx.selectedValue.value) {
+        ctx.setSelectedIndex(index.value);
       }
     },
     {immediate: true},
   );
 
   return () => {
-    const context = ctx.value;
+    const context = ctx;
     const isActive = index.value === context.activeIndex.value;
     const isSelected = index.value === context.selectedIndex.value;
     const onSelect = () => {

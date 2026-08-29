@@ -31,7 +31,7 @@ const SearchOption = defineComponent(function (props: {
   const ctx = SelectContext.use();
 
   return () => {
-    const isActive = index.value === ctx.value.activeIndex.value;
+    const isActive = index.value === ctx.activeIndex.value;
 
     return (
       <div
@@ -42,7 +42,7 @@ const SearchOption = defineComponent(function (props: {
         className={`p-4 outline-none cursor-default flex justify-between align-items-center${
           isActive ? ' bg-slate-50' : ''
         }`}
-        {...ctx.value.getItemProps({
+        {...ctx.getItemProps({
           onClick: props.onClick,
           onKeyDown(e: any) {
             if (e.currentTarget !== e.target) return;

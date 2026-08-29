@@ -97,8 +97,8 @@ const Option = defineComponent(function (props: {label: string}) {
   const {ref, index} = useListItem({label: props.label});
 
   return () => {
-    const activeIndex = ctx.value.activeIndex.value;
-    const selectedIndex = ctx.value.selectedIndex.value;
+    const activeIndex = ctx.activeIndex.value;
+    const selectedIndex = ctx.selectedIndex.value;
 
     const isActive = activeIndex === index.value;
     const isSelected = selectedIndex === index.value;
@@ -120,8 +120,8 @@ const Option = defineComponent(function (props: {label: string}) {
           background: isActive ? 'cyan' : '',
           fontWeight: isSelected ? 'bold' : '',
         }}
-        {...ctx.value.getItemProps({
-          onClick: () => ctx.value.handleSelect(index.value),
+        {...ctx.getItemProps({
+          onClick: () => ctx.handleSelect(index.value),
         })}
       >
         {props.label}

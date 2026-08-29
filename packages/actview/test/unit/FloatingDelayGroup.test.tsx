@@ -26,11 +26,11 @@ const Tooltip = defineComponent(function (props: {
     },
   });
 
-  // useDelayGroup 返回 Ref<GroupContext>；delay 随 group 状态变化
-  // （如切换到新的 reference 时变为 {open: 1, close: ...}），
+  // store-as-is：useDelayGroup 返回 GroupContext（payload 直读）；delay 随
+  // group 状态变化（如切换到新的 reference 时变为 {open: 1, close: ...}），
   // 用函数形式让 useHover 每次事件处理时读取最新值（React 版靠重渲染传值）。
   const groupContext = useDelayGroup(context);
-  const hover = useHover(context, {delay: () => groupContext.value.delay});
+  const hover = useHover(context, {delay: () => groupContext.delay});
   const {getReferenceProps} = useInteractions([hover]);
 
   return () => {

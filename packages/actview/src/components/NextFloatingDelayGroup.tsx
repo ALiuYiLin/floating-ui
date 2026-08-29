@@ -75,7 +75,9 @@ export const NextFloatingDelayGroup = defineComponent(function (
   const currentContextRef = ref<CurrentContext | null>(null);
   const timeoutIdRef = ref(-1);
 
-  const contextValue = computed<ContextValue>(() => ({
+  // store-as-is 载体：身份稳定的对象（字段全是 ref 容器，字段引用不变、
+  // 消费方读 `.value` 实时；computed 重建的新对象会冻结快照）。
+  const contextValue: ContextValue = {
     hasProvider: true,
     delayRef,
     initialDelayRef,
@@ -83,10 +85,10 @@ export const NextFloatingDelayGroup = defineComponent(function (
     timeoutMs,
     currentContextRef,
     timeoutIdRef,
-  }));
+  };
 
   return () => (
-    <NextFloatingDelayGroupContext.Provider value={contextValue.value}>
+    <NextFloatingDelayGroupContext.Provider value={contextValue}>
       {children}
     </NextFloatingDelayGroupContext.Provider>
   );
@@ -136,7 +138,7 @@ export function useNextDelayGroup(
     currentContextRef,
     hasProvider,
     timeoutIdRef,
-  } = groupContext.value;
+  } = groupContext;
 
   const isInstantPhase = ref(false);
 

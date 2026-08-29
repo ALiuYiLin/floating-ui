@@ -195,7 +195,7 @@ export const MenuComponent = defineComponent(function (props: MenuProps & any) {
   const mergedRef = useMergeRefs([refs.setReference, item.ref, props.ref]);
 
   return () => {
-    const ctx = parent.value;
+    const ctx = parent;
     const parentActive = ctx ? ctx.activeIndex.value : null;
     const parentAllowHover = ctx ? ctx.allowHover.value : false;
     const parentIsOpen = ctx ? ctx.isOpen.value : false;
@@ -322,7 +322,7 @@ export const MenuItem = defineComponent(function (props: MenuItemProps & any) {
   const tree = useFloatingTree();
 
   return () => {
-    const ctx = menu.value;
+    const ctx = menu;
     const isActive = item.index.value === (ctx ? ctx.activeIndex.value : null);
 
     return (
