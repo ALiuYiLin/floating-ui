@@ -213,12 +213,6 @@ importers:
 
   packages/actview:
     dependencies:
-      '@actview/core':
-        specifier: 1.4.1
-        version: 1.4.1
-      '@actview/jsx':
-        specifier: 1.1.0
-        version: 1.1.0
       '@floating-ui/dom':
         specifier: workspace:^
         version: link:../dom
@@ -229,11 +223,17 @@ importers:
         specifier: ^6.0.0
         version: 6.2.0
     devDependencies:
+      '@actview/core':
+        specifier: ^1.4.0
+        version: 1.4.1
+      '@actview/jsx':
+        specifier: ^1.1.0
+        version: 1.1.0
       '@actview/plugin-babel':
-        specifier: 2.0.0
+        specifier: ^2.0.0
         version: 2.0.0(@babel/core@7.26.10)(@babel/generator@7.26.10)
       '@actview/testing':
-        specifier: 0.1.1
+        specifier: ^0.1.0
         version: 0.1.1(@actview/core@1.4.1)
       '@testing-library/dom':
         specifier: ^10.4.0
